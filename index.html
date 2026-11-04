@@ -1,0 +1,2044 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Resonance — Apple-Inspired Slowed & Reverb Studio</title>
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com/3.4.17"></script>
+  <!-- JSZip for exporting complete repo -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            apple: {
+              black: '#000000',
+              card: '#161617',
+              cardHover: '#1d1d1f',
+              elevated: '#242426',
+              border: 'rgba(255, 255, 255, 0.08)',
+              borderHover: 'rgba(255, 255, 255, 0.16)',
+              blue: '#0071e3',
+              blueHover: '#0077ed',
+              blueLight: '#2997ff',
+              textPrimary: '#f5f5f7',
+              textSecondary: '#86868b',
+              textTertiary: '#6e6e73',
+              purple: '#af52de',
+              cyan: '#64d2ff',
+              pink: '#ff375f',
+              green: '#30d158',
+              orange: '#ff9f0a'
+            }
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"SF Pro Display"', '"SF Pro Text"', '"Helvetica Neue"', 'Helvetica', 'Arial', 'sans-serif'],
+          }
+        }
+      }
+    }
+  </script>
+  <style>
+    /* Apple typography and smooth rendering */
+    body {
+      -webkit-font-smoothing: antialiased;
+      -moz-osx-font-smoothing: grayscale;
+      background-color: #000000;
+      color: #f5f5f7;
+    }
+
+    /* Apple Frosted Glass Materials */
+    .apple-glass {
+      background: rgba(22, 22, 23, 0.78);
+      backdrop-filter: blur(24px) saturate(180%);
+      -webkit-backdrop-filter: blur(24px) saturate(180%);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    
+    .apple-card {
+      background: rgba(22, 22, 23, 0.82);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 24px;
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    .apple-card:hover {
+      border-color: rgba(255, 255, 255, 0.16);
+      box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Apple Segmented Control Pill */
+    .segmented-control {
+      background: rgba(255, 255, 255, 0.06);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      padding: 3px;
+      border-radius: 9999px;
+    }
+
+    /* Apple iOS / macOS Sliders */
+    input[type=range] {
+      -webkit-appearance: none;
+      appearance: none;
+      background: rgba(255, 255, 255, 0.12);
+      height: 5px;
+      border-radius: 9999px;
+      outline: none;
+      transition: background 0.2s ease;
+    }
+    input[type=range]:hover {
+      background: rgba(255, 255, 255, 0.18);
+    }
+    input[type=range]::-webkit-slider-thumb {
+      -webkit-appearance: none;
+      appearance: none;
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #ffffff;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5), 0 0 1px rgba(0, 0, 0, 0.3);
+      transition: transform 0.15s cubic-bezier(0.2, 0, 0, 1);
+    }
+    input[type=range]::-webkit-slider-thumb:hover {
+      transform: scale(1.18);
+    }
+    input[type=range]::-moz-range-thumb {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      background: #ffffff;
+      border: none;
+      cursor: pointer;
+      box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
+    }
+
+    /* Apple subtle gradient texts */
+    .apple-headline-gradient {
+      background: linear-gradient(180deg, #ffffff 0%, #a1a1a6 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    /* Subtle custom scrollbar */
+    ::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    ::-webkit-scrollbar-track {
+      background: #000000;
+    }
+    ::-webkit-scrollbar-thumb {
+      background: #2c2c2e;
+      border-radius: 3px;
+    }
+    ::-webkit-scrollbar-thumb:hover {
+      background: #3a3a3c;
+    }
+  </style>
+</head>
+<body class="bg-black text-[#f5f5f7] min-h-screen flex flex-col font-sans selection:bg-[#0071e3] selection:text-white">
+
+  <!-- Apple Ambient Lighting Glow (Subtle & Elegant) -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
+    <div class="absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-gradient-to-b from-[#0071e3]/15 to-transparent rounded-full blur-[140px]"></div>
+    <div class="absolute top-1/2 -right-48 w-[400px] h-[400px] bg-[#af52de]/10 rounded-full blur-[160px]"></div>
+  </div>
+
+  <!-- Apple-Style Navigation Bar -->
+  <header class="relative z-20 border-b border-white/[0.08] bg-black/75 backdrop-blur-2xl sticky top-0 px-4 lg:px-8 h-14 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      <!-- Apple Music / Studio Inspired Icon -->
+      <div class="w-8 h-8 rounded-full bg-gradient-to-b from-[#2c2c2e] to-[#1c1c1e] border border-white/10 flex items-center justify-center shadow-inner">
+        <svg class="w-4 h-4 text-[#2997ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+          <path d="M2 10v4"/><path d="M6 6v12"/><path d="M10 3v18"/><path d="M14 7v10"/><path d="M18 5v14"/><path d="M22 10v4"/>
+        </svg>
+      </div>
+      <div class="flex items-center gap-2">
+        <span class="font-semibold text-sm tracking-tight text-[#f5f5f7]">Resonance</span>
+        <span class="text-[10px] px-2 py-0.5 rounded-full bg-white/[0.08] text-[#86868b] font-medium border border-white/5">Pro</span>
+      </div>
+    </div>
+
+    <!-- Apple Top Bar Pill Actions -->
+    <div class="flex items-center gap-2">
+      <button id="btnDemoTrack" type="button" class="px-3.5 py-1.5 rounded-full bg-[#1c1c1e] hover:bg-[#2c2c2e] text-xs font-medium text-[#f5f5f7] border border-white/10 transition-colors flex items-center gap-1.5 shadow-sm">
+        <svg class="w-3.5 h-3.5 text-[#2997ff]" viewBox="0 0 24 24" fill="currentColor">
+          <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon>
+        </svg>
+        <span>Demo Track</span>
+      </button>
+
+      <button id="btnGithubGuide" type="button" class="px-3.5 py-1.5 rounded-full bg-[#1c1c1e] hover:bg-[#2c2c2e] text-xs font-medium text-[#f5f5f7] border border-white/10 transition-colors flex items-center gap-1.5 shadow-sm">
+        <svg class="w-3.5 h-3.5 text-[#86868b]" viewBox="0 0 24 24" fill="currentColor">
+          <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+        </svg>
+        <span class="hidden sm:inline">Host on GitHub</span>
+      </button>
+
+      <button id="btnDownloadZip" type="button" class="px-4 py-1.5 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-xs font-medium text-white transition-colors flex items-center gap-1.5 shadow-sm">
+        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
+          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+        </svg>
+        <span>Export Repo</span>
+      </button>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="relative z-10 flex-1 max-w-6xl w-full mx-auto px-4 lg:px-8 py-8 space-y-8">
+
+    <!-- Apple-Style Hero Headline -->
+    <div class="text-center pt-2 pb-1 space-y-2">
+      <span class="text-xs font-semibold tracking-wider uppercase text-[#2997ff]">In-Browser Audio Engine</span>
+      <h1 class="text-3xl md:text-5xl font-semibold tracking-tight apple-headline-gradient">
+        Slowed & Reverb. Reimagined.
+      </h1>
+      <p class="text-xs md:text-sm text-[#86868b] max-w-xl mx-auto leading-relaxed">
+        High-precision tempo resampling, algorithmic convolution reverb, and punchy 808 dynamics. 100% private, client-side Web Audio.
+      </p>
+    </div>
+
+    <!-- Apple Upload Hero Card -->
+    <div id="dropZone" class="apple-card p-6 md:p-8 border border-white/[0.08] hover:border-white/20 transition duration-300 relative group cursor-pointer overflow-hidden">
+      <input type="file" id="audioFileInput" accept="audio/*" class="absolute inset-0 opacity-0 cursor-pointer z-10">
+      
+      <div id="uploadPrompt" class="flex flex-col sm:flex-row items-center justify-between gap-6 py-2">
+        <div class="flex items-center gap-5 text-center sm:text-left">
+          <div class="w-14 h-14 rounded-2xl bg-gradient-to-b from-[#242426] to-[#1a1a1c] border border-white/10 flex items-center justify-center text-[#2997ff] group-hover:scale-105 transition-transform duration-300 shadow-lg">
+            <svg class="w-7 h-7" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+            </svg>
+          </div>
+          <div>
+            <h3 class="font-medium text-[#f5f5f7] text-base">Select or drop an audio track to begin</h3>
+            <p class="text-xs text-[#86868b] mt-1">Lossless support for MP3, WAV, FLAC, M4A, AAC, and OGG</p>
+          </div>
+        </div>
+        <div>
+          <button id="btnBrowseFile" type="button" class="px-5 py-2.5 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-xs font-medium text-white shadow-sm transition-colors pointer-events-none">
+            Choose Audio File
+          </button>
+        </div>
+      </div>
+
+      <!-- Loaded Track Info (Initially Hidden) -->
+      <div id="trackInfoPanel" class="hidden flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+        <div class="flex items-center gap-4 min-w-0">
+          <div class="w-12 h-12 rounded-2xl bg-gradient-to-b from-[#2997ff]/20 to-[#af52de]/20 border border-white/10 flex items-center justify-center text-[#2997ff] shrink-0">
+            <svg class="w-6 h-6 animate-pulse" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M9 18V5l12-2v13"/><circle cx="6" cy="18" r="3"/><circle cx="18" cy="16" r="3"/>
+            </svg>
+          </div>
+          <div class="min-w-0">
+            <h4 id="trackTitle" class="font-medium text-[#f5f5f7] text-sm truncate">Original Track.mp3</h4>
+            <div class="flex items-center gap-2 text-xs text-[#86868b] mt-0.5">
+              <span id="trackDuration">0:00</span>
+              <span>•</span>
+              <span id="trackSampleRate">44.1 kHz</span>
+              <span>•</span>
+              <span class="text-[#2997ff]">Ready to Remix</span>
+            </div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+          <button id="btnReplaceTrack" type="button" class="px-4 py-1.5 rounded-full bg-[#242426] hover:bg-[#2c2c2e] text-xs font-medium text-[#f5f5f7] border border-white/10 transition-colors">
+            Change File
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Apple Music / Studio Transport Bar & Visualizer -->
+    <div class="apple-card p-6 md:p-7 border border-white/[0.08] space-y-5">
+      <!-- Visualizer Canvas -->
+      <div class="relative w-full h-32 md:h-36 rounded-2xl bg-[#0c0c0e] border border-white/[0.06] overflow-hidden flex flex-col justify-end">
+        <canvas id="visualizerCanvas" class="w-full h-full block"></canvas>
+        
+        <!-- Apple Segmented Control for Visualizer Mode -->
+        <div class="absolute top-3 right-3 flex items-center gap-1 bg-[#1c1c1e]/90 backdrop-blur-md px-1 py-1 rounded-full border border-white/10 text-[11px]">
+          <button id="btnVizBars" type="button" class="px-2.5 py-0.5 rounded-full text-white font-medium bg-[#3a3a3c] shadow-sm transition">Bars</button>
+          <button id="btnVizWave" type="button" class="px-2.5 py-0.5 rounded-full text-[#86868b] hover:text-[#f5f5f7] transition">Wave</button>
+        </div>
+
+        <div id="canvasEmptyMessage" class="absolute inset-0 flex items-center justify-center text-xs text-[#6e6e73] pointer-events-none font-normal">
+          Upload an audio file or click "Demo Track" to see live acoustic spectrum
+        </div>
+      </div>
+
+      <!-- Scrubber Timeline -->
+      <div class="space-y-1.5">
+        <div class="flex items-center justify-between text-xs text-[#86868b] font-mono tabular-nums">
+          <span id="timeCurrent">0:00</span>
+          <span id="timeDuration">0:00</span>
+        </div>
+        <input type="range" id="seekSlider" min="0" max="100" value="0" step="0.1" class="w-full cursor-pointer">
+      </div>
+
+      <!-- Playback Controls Bar -->
+      <div class="flex flex-wrap items-center justify-between gap-4 pt-1">
+        <!-- Transport Buttons -->
+        <div class="flex items-center gap-2.5">
+          <!-- Rewind 5s -->
+          <button id="btnRewind" type="button" class="w-9 h-9 rounded-full bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[#f5f5f7] border border-white/5 transition flex items-center justify-center" title="Rewind 5s">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="11 19 2 12 11 5 11 19"/><polygon points="22 19 13 12 22 5 22 19"/>
+            </svg>
+          </button>
+
+          <!-- Play / Pause (Apple Circular Hero Button) -->
+          <button id="btnPlayPause" type="button" class="px-5 py-2 rounded-full bg-[#ffffff] hover:bg-[#e5e5ea] text-black font-medium transition-all shadow-md flex items-center gap-2">
+            <svg id="playIcon" class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="currentColor">
+              <polygon points="5 3 19 12 5 21 5 3"/>
+            </svg>
+            <svg id="pauseIcon" class="w-3.5 h-3.5 hidden" viewBox="0 0 24 24" fill="currentColor">
+              <rect x="6" y="4" width="4" height="16"/><rect x="14" y="4" width="4" height="16"/>
+            </svg>
+            <span id="playPauseText" class="text-xs font-semibold">Play</span>
+          </button>
+
+          <!-- Forward 5s -->
+          <button id="btnForward" type="button" class="w-9 h-9 rounded-full bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[#f5f5f7] border border-white/5 transition flex items-center justify-center" title="Forward 5s">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polygon points="13 19 22 12 13 5 13 19"/><polygon points="2 19 11 12 2 5 2 19"/>
+            </svg>
+          </button>
+
+          <!-- Loop Toggle -->
+          <button id="btnLoop" type="button" class="w-9 h-9 rounded-full bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[#86868b] border border-white/5 transition flex items-center justify-center" title="Toggle Loop">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <polyline points="17 1 21 5 17 9"/><path d="M3 11V9a4 4 0 0 1 4-4h14"/><polyline points="7 23 3 19 7 15"/><path d="M21 13v2a4 4 0 0 1-4 4H3"/>
+            </svg>
+          </button>
+
+          <!-- Bypass FX Toggle -->
+          <button id="btnBypass" type="button" class="px-3 py-1.5 rounded-full bg-[#1c1c1e] hover:bg-[#2c2c2e] text-xs font-medium text-[#86868b] border border-white/5 transition" title="Compare original vs remixed">
+            Bypass FX: <span id="bypassStatus" class="text-[#f5f5f7]">OFF</span>
+          </button>
+        </div>
+
+        <!-- Volume Slider & Export Action -->
+        <div class="flex items-center gap-4">
+          <!-- Volume -->
+          <div class="flex items-center gap-2.5">
+            <button id="btnMute" type="button" class="text-[#86868b] hover:text-[#f5f5f7] transition">
+              <svg id="volumeIcon" class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"/><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"/>
+              </svg>
+            </button>
+            <input type="range" id="volumeSlider" min="0" max="1" value="0.85" step="0.01" class="w-20 sm:w-24 cursor-pointer">
+          </div>
+
+          <!-- Big Export Button (Apple Green / Blue Pill) -->
+          <button id="btnExportWav" type="button" class="px-4 py-2 rounded-full bg-[#30d158] hover:bg-[#28b84d] text-xs font-semibold text-black shadow-sm transition flex items-center gap-1.5">
+            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
+            </svg>
+            <span>Download WAV</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Apple Preset Cards (Bento Style) -->
+    <div class="space-y-3">
+      <div class="flex items-center justify-between">
+        <h3 class="text-xs font-semibold uppercase tracking-wider text-[#86868b] flex items-center gap-1.5">
+          <svg class="w-3.5 h-3.5 text-[#2997ff]" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="m12 3-1.912 5.813a2 2 0 0 1-1.275 1.275L3 12l5.813 1.912a2 2 0 0 1 1.275 1.275L12 21l1.912-5.813a2 2 0 0 1 1.275-1.275L21 12l-5.813-1.912a2 2 0 0 1-1.275-1.275L12 3Z"/>
+          </svg>
+          Studio Presets
+        </h3>
+        <button id="btnResetAll" type="button" class="text-xs text-[#86868b] hover:text-[#ff375f] transition">Reset All Controls</button>
+      </div>
+
+      <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-7 gap-2.5">
+        <button type="button" data-preset="slowed-reverb" class="preset-btn p-3.5 rounded-2xl bg-[#161617] hover:bg-[#1d1d1f] text-left border border-white/[0.08] hover:border-white/20 transition group">
+          <div class="text-xs font-medium text-[#2997ff] group-hover:translate-x-0.5 transition-transform">Slowed + Reverb</div>
+          <div class="text-[11px] text-[#86868b] mt-0.5">0.85x • Deep Hall</div>
+        </button>
+
+        <button type="button" data-preset="nightcore" class="preset-btn p-3.5 rounded-2xl bg-[#161617] hover:bg-[#1d1d1f] text-left border border-white/[0.08] hover:border-white/20 transition group">
+          <div class="text-xs font-medium text-[#ff375f] group-hover:translate-x-0.5 transition-transform">Nightcore</div>
+          <div class="text-[11px] text-[#86868b] mt-0.5">1.25x • High Pitch</div>
+        </button>
+
+        <button type="button" data-preset="daycore" class="preset-btn p-3.5 rounded-2xl bg-[#161617] hover:bg-[#1d1d1f] text-left border border-white/[0.08] hover:border-white/20 transition group">
+          <div class="text-xs font-medium text-[#af52de] group-hover:translate-x-0.5 transition-transform">Daycore / Heavy</div>
+          <div class="text-[11px] text-[#86868b] mt-0.5">0.76x • Low Octave</div>
+        </button>
+
+        <button type="button" data-preset="vaporwave" class="preset-btn p-3.5 rounded-2xl bg-[#161617] hover:bg-[#1d1d1f] text-left border border-white/[0.08] hover:border-white/20 transition group">
+          <div class="text-xs font-medium text-[#64d2ff] group-hover:translate-x-0.5 transition-transform">Vaporwave '88</div>
+          <div class="text-[11px] text-[#86868b] mt-0.5">0.82x • Tape Warmth</div>
+        </button>
+
+        <button type="button" data-preset="underwater" class="preset-btn p-3.5 rounded-2xl bg-[#161617] hover:bg-[#1d1d1f] text-left border border-white/[0.08] hover:border-white/20 transition group">
+          <div class="text-xs font-medium text-[#30d158] group-hover:translate-x-0.5 transition-transform">Underwater</div>
+          <div class="text-[11px] text-[#86868b] mt-0.5">0.88x • Muffled Bass</div>
+        </button>
+
+        <button type="button" data-preset="cathedral" class="preset-btn p-3.5 rounded-2xl bg-[#161617] hover:bg-[#1d1d1f] text-left border border-white/[0.08] hover:border-white/20 transition group">
+          <div class="text-xs font-medium text-[#ff9f0a] group-hover:translate-x-0.5 transition-transform">Cathedral Void</div>
+          <div class="text-[11px] text-[#86868b] mt-0.5">0.90x • 7s Lush Tail</div>
+        </button>
+
+        <button type="button" data-preset="original" class="preset-btn p-3.5 rounded-2xl bg-[#161617] hover:bg-[#1d1d1f] text-left border border-white/[0.08] hover:border-white/20 transition group">
+          <div class="text-xs font-medium text-[#f5f5f7] group-hover:translate-x-0.5 transition-transform">Clean Studio</div>
+          <div class="text-[11px] text-[#86868b] mt-0.5">1.00x • Dry / Pure</div>
+        </button>
+      </div>
+    </div>
+
+    <!-- Apple Bento Controls Grid (Racks) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+
+      <!-- RACK 1: Speed & Pitch Shift -->
+      <div class="apple-card p-6 border border-white/[0.08] space-y-5">
+        <div class="flex items-center justify-between border-b border-white/[0.06] pb-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-full bg-[#1c1c1e] text-[#2997ff] flex items-center justify-center border border-white/5">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
+              </svg>
+            </div>
+            <h4 class="font-medium text-[#f5f5f7] text-sm">Tempo & Pitch</h4>
+          </div>
+          <span class="text-xs px-2.5 py-0.5 rounded-full bg-[#242426] text-[#2997ff] font-mono tabular-nums border border-white/5" id="speedBadge">0.85x</span>
+        </div>
+
+        <!-- Speed Slider -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between text-xs text-[#f5f5f7]">
+            <span>Playback Speed</span>
+            <span id="speedValueText" class="font-mono text-[#2997ff] font-medium tabular-nums">85%</span>
+          </div>
+          <input type="range" id="speedSlider" min="0.50" max="1.50" step="0.01" value="0.85" class="w-full">
+          <div class="flex justify-between text-[11px] text-[#6e6e73]">
+            <span>0.5x Slow</span>
+            <span class="cursor-pointer hover:text-[#f5f5f7] transition" id="btnSnapSpeedDefault">1.0x Normal</span>
+            <span>1.5x Fast</span>
+          </div>
+        </div>
+
+        <!-- Quick Speed Snaps -->
+        <div class="flex items-center gap-1.5 pt-1">
+          <button type="button" class="snap-speed-btn px-2.5 py-1 rounded-full bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[11px] text-[#f5f5f7] border border-white/5 transition" data-speed="0.75">0.75x</button>
+          <button type="button" class="snap-speed-btn px-2.5 py-1 rounded-full bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[11px] text-[#f5f5f7] border border-white/5 transition" data-speed="0.80">0.80x</button>
+          <button type="button" class="snap-speed-btn px-2.5 py-1 rounded-full bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[11px] text-[#f5f5f7] border border-white/5 transition" data-speed="0.85">0.85x</button>
+          <button type="button" class="snap-speed-btn px-2.5 py-1 rounded-full bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[11px] text-[#f5f5f7] border border-white/5 transition" data-speed="0.90">0.90x</button>
+          <button type="button" class="snap-speed-btn px-2.5 py-1 rounded-full bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[11px] text-[#f5f5f7] border border-white/5 transition" data-speed="1.15">1.15x</button>
+          <button type="button" class="snap-speed-btn px-2.5 py-1 rounded-full bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[11px] text-[#f5f5f7] border border-white/5 transition" data-speed="1.25">1.25x</button>
+        </div>
+
+        <!-- Pitch Shift (Detune) -->
+        <div class="space-y-2 pt-2 border-t border-white/[0.06]">
+          <div class="flex items-center justify-between text-xs text-[#f5f5f7]">
+            <span>Pitch Detune</span>
+            <span id="pitchValueText" class="font-mono text-[#2997ff] font-medium tabular-nums">0 semitones</span>
+          </div>
+          <input type="range" id="pitchSlider" min="-12" max="12" step="1" value="0" class="w-full">
+          <div class="flex justify-between text-[11px] text-[#6e6e73]">
+            <span>-12 st (Octave Down)</span>
+            <span class="cursor-pointer hover:text-[#f5f5f7] transition" id="btnSnapPitchZero">0 st (Natural)</span>
+            <span>+12 st (Octave Up)</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- RACK 2: Reverb Chamber -->
+      <div class="apple-card p-6 border border-white/[0.08] space-y-5">
+        <div class="flex items-center justify-between border-b border-white/[0.06] pb-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-full bg-[#1c1c1e] text-[#64d2ff] flex items-center justify-center border border-white/5">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 2a10 10 0 1 0 10 10A10 10 0 0 0 12 2zm0 18a8 8 0 1 1 8-8 8 8 0 0 1-8 8z"/>
+                <path d="M12 6a6 6 0 1 0 6 6 6 6 0 0 0-6-6zm0 8a2 2 0 1 1 2-2 2 2 0 0 1-2 2z"/>
+              </svg>
+            </div>
+            <h4 class="font-medium text-[#f5f5f7] text-sm">Convolution Reverb</h4>
+          </div>
+          <span class="text-xs px-2.5 py-0.5 rounded-full bg-[#242426] text-[#64d2ff] font-mono border border-white/5" id="reverbSpaceBadge">Cathedral</span>
+        </div>
+
+        <!-- Space Algorithm Selector -->
+        <div class="space-y-1.5">
+          <label class="text-xs text-[#86868b] block">Acoustic Model</label>
+          <select id="reverbSpaceSelect" class="w-full bg-[#1c1c1e] border border-white/10 rounded-xl px-3.5 py-2 text-xs text-[#f5f5f7] focus:outline-none focus:border-[#0071e3] transition">
+            <option value="cathedral">Empty Cathedral (Deep & Airy)</option>
+            <option value="hall">Concert Hall (Warm & Wide)</option>
+            <option value="ethereal">Ethereal Dream (Infinite Decay)</option>
+            <option value="room">Cozy Bedroom (Intimate)</option>
+            <option value="underwater">Submerged Void (Dark Echo)</option>
+          </select>
+        </div>
+
+        <!-- Reverb Wet/Dry Mix -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between text-xs text-[#f5f5f7]">
+            <span>Mix (Wet / Dry)</span>
+            <span id="reverbMixValueText" class="font-mono text-[#64d2ff] font-medium tabular-nums">45%</span>
+          </div>
+          <input type="range" id="reverbMixSlider" min="0" max="100" step="1" value="45" class="w-full">
+          <div class="flex justify-between text-[11px] text-[#6e6e73]">
+            <span>0% Dry</span>
+            <span>50% Balanced</span>
+            <span>100% Full Wet</span>
+          </div>
+        </div>
+
+        <!-- Decay Time -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between text-xs text-[#f5f5f7]">
+            <span>Decay Tail</span>
+            <span id="reverbDecayValueText" class="font-mono text-[#64d2ff] font-medium tabular-nums">4.0s</span>
+          </div>
+          <input type="range" id="reverbDecaySlider" min="0.5" max="9.0" step="0.1" value="4.0" class="w-full">
+          <div class="flex justify-between text-[11px] text-[#6e6e73]">
+            <span>0.5s Short</span>
+            <span>4.0s Lush</span>
+            <span>9.0s Infinite</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- RACK 3: Tone & Bass Engine -->
+      <div class="apple-card p-6 border border-white/[0.08] space-y-5">
+        <div class="flex items-center justify-between border-b border-white/[0.06] pb-3">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-full bg-[#1c1c1e] text-[#af52de] flex items-center justify-center border border-white/5">
+              <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/><line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/><line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/><line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
+              </svg>
+            </div>
+            <h4 class="font-medium text-[#f5f5f7] text-sm">Tone & Equalizer</h4>
+          </div>
+          <span class="text-xs px-2.5 py-0.5 rounded-full bg-[#242426] text-[#af52de] font-mono border border-white/5">808 Dynamics</span>
+        </div>
+
+        <!-- Bass Boost (Low Shelf 120Hz) -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between text-xs text-[#f5f5f7]">
+            <span>Sub-Bass Boost</span>
+            <span id="bassBoostValueText" class="font-mono text-[#af52de] font-medium tabular-nums">+6 dB</span>
+          </div>
+          <input type="range" id="bassBoostSlider" min="0" max="15" step="0.5" value="6" class="w-full">
+          <div class="flex justify-between text-[11px] text-[#6e6e73]">
+            <span>Flat (0 dB)</span>
+            <span>+6 dB Warm</span>
+            <span>+15 dB Heavy</span>
+          </div>
+        </div>
+
+        <!-- High-Cut Warmth (Lowpass Filter) -->
+        <div class="space-y-2">
+          <div class="flex items-center justify-between text-xs text-[#f5f5f7]">
+            <span>High-Cut Damping</span>
+            <span id="highCutValueText" class="font-mono text-[#af52de] font-medium tabular-nums">14.0 kHz</span>
+          </div>
+          <input type="range" id="highCutSlider" min="1500" max="20000" step="250" value="14000" class="w-full">
+          <div class="flex justify-between text-[11px] text-[#6e6e73]">
+            <span>1.5 kHz Muffled</span>
+            <span>10 kHz Warm</span>
+            <span>20 kHz Crisp</span>
+          </div>
+        </div>
+
+        <!-- Lo-Fi Texture & Vinyl Toggle -->
+        <div class="pt-2 border-t border-white/[0.06] space-y-2.5">
+          <div class="flex items-center justify-between">
+            <span class="text-xs text-[#86868b]">Vinyl / Cassette Hiss</span>
+            <button id="btnToggleNoise" type="button" class="px-3 py-1 rounded-full bg-[#1c1c1e] hover:bg-[#2c2c2e] text-xs font-medium text-[#f5f5f7] border border-white/10 transition-colors">
+              <span id="noiseToggleText">Disabled</span>
+            </button>
+          </div>
+          <div id="noiseVolumeContainer" class="hidden space-y-1.5">
+            <div class="flex items-center justify-between text-[11px] text-[#86868b]">
+              <span>Texture Level</span>
+              <span id="noiseVolumeText" class="font-mono text-[#af52de] tabular-nums">15%</span>
+            </div>
+            <input type="range" id="noiseVolumeSlider" min="0" max="0.4" step="0.02" value="0.15" class="w-full">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Export & Progress Banner (Shows during render) -->
+    <div id="renderProgressBanner" class="hidden apple-card p-6 border border-[#30d158]/30 space-y-3">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-5 h-5 border-2 border-[#30d158] border-t-transparent rounded-full animate-spin"></div>
+          <div>
+            <h4 class="font-medium text-[#f5f5f7] text-sm">Rendering Master Lossless WAV...</h4>
+            <p class="text-xs text-[#86868b]">OfflineAudioContext convolution processing at 100x speed</p>
+          </div>
+        </div>
+        <span id="renderProgressText" class="text-xs font-mono text-[#30d158] font-bold tabular-nums">0%</span>
+      </div>
+      <div class="w-full bg-[#242426] rounded-full h-1.5 overflow-hidden">
+        <div id="renderProgressBar" class="bg-[#30d158] h-1.5 rounded-full transition-all duration-150 w-0"></div>
+      </div>
+    </div>
+
+    <!-- Apple-Style Bottom Value Cards (Bento) -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 pt-2">
+      <div class="apple-card p-5 border border-white/[0.08] space-y-2">
+        <div class="flex items-center gap-2 text-[#2997ff] text-sm font-medium">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+          </svg>
+          Privacy by Design
+        </div>
+        <p class="text-xs text-[#86868b] leading-relaxed">
+          Your audio never touches an external server. All spatial acoustics, pitch curves, and mastering stay strictly on your device.
+        </p>
+      </div>
+
+      <div class="apple-card p-5 border border-white/[0.08] space-y-2">
+        <div class="flex items-center gap-2 text-[#64d2ff] text-sm font-medium">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+          </svg>
+          Studio Fidelity
+        </div>
+        <p class="text-xs text-[#86868b] leading-relaxed">
+          Export pristine 16-bit stereo PCM WAV files with zero lossy compression, ready for streaming platforms and video creation.
+        </p>
+      </div>
+
+      <div class="apple-card p-5 border border-white/[0.08] space-y-2">
+        <div class="flex items-center gap-2 text-[#af52de] text-sm font-medium">
+          <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"/>
+          </svg>
+          Zero Infrastructure
+        </div>
+        <p class="text-xs text-[#86868b] leading-relaxed">
+          100% static architecture. Host for free forever with your own custom domain on GitHub Pages or Cloudflare with zero upkeep.
+        </p>
+      </div>
+    </div>
+  </main>
+
+  <!-- GitHub Pages Guide Modal (Apple macOS Sheet Style) -->
+  <div id="githubModal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-2xl">
+    <div class="apple-card max-w-lg w-full p-7 border border-white/15 shadow-2xl space-y-5 relative max-h-[90vh] overflow-y-auto">
+      <button id="btnCloseModal" type="button" class="absolute top-5 right-5 w-8 h-8 rounded-full bg-[#242426] hover:bg-[#2c2c2e] text-[#86868b] hover:text-white flex items-center justify-center transition">
+        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+        </svg>
+      </button>
+
+      <div class="flex items-center gap-3.5">
+        <div class="w-10 h-10 rounded-2xl bg-[#1c1c1e] border border-white/10 flex items-center justify-center text-[#2997ff]">
+          <svg class="w-5 h-5" viewBox="0 0 24 24" fill="currentColor">
+            <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
+          </svg>
+        </div>
+        <div>
+          <h3 class="font-medium text-[#f5f5f7] text-base">Publish Free on GitHub Pages</h3>
+          <p class="text-xs text-[#86868b]">Zero hosting cost. Live in 3 simple steps.</p>
+        </div>
+      </div>
+
+      <div class="space-y-3.5 text-xs text-[#f5f5f7]">
+        <!-- Step 1 -->
+        <div class="flex items-start gap-3 p-3.5 rounded-2xl bg-[#1c1c1e] border border-white/5">
+          <div class="w-6 h-6 rounded-full bg-[#242426] text-[#2997ff] font-medium flex items-center justify-center shrink-0 text-xs">1</div>
+          <div class="space-y-1">
+            <h5 class="font-medium text-white">Create a Repository on GitHub</h5>
+            <p class="text-[#86868b]">Go to <strong class="text-[#f5f5f7]">github.com</strong> and click <strong class="text-[#f5f5f7]">New repository</strong>. Name it e.g. <code class="bg-[#242426] px-1.5 py-0.5 rounded text-[#2997ff]">resonance</code>. Set visibility to <strong>Public</strong>.</p>
+          </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div class="flex items-start gap-3 p-3.5 rounded-2xl bg-[#1c1c1e] border border-white/5">
+          <div class="w-6 h-6 rounded-full bg-[#242426] text-[#64d2ff] font-medium flex items-center justify-center shrink-0 text-xs">2</div>
+          <div class="space-y-1">
+            <h5 class="font-medium text-white">Upload index.html</h5>
+            <p class="text-[#86868b]">Click <strong class="text-[#f5f5f7]">"uploading an existing file"</strong>, drop this <code class="bg-[#242426] px-1.5 py-0.5 rounded text-[#64d2ff]">index.html</code> (or export the repo ZIP), and commit changes.</p>
+          </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div class="flex items-start gap-3 p-3.5 rounded-2xl bg-[#1c1c1e] border border-white/5">
+          <div class="w-6 h-6 rounded-full bg-[#242426] text-[#30d158] font-medium flex items-center justify-center shrink-0 text-xs">3</div>
+          <div class="space-y-1">
+            <h5 class="font-medium text-white">Activate Pages</h5>
+            <p class="text-[#86868b]">Go to <strong class="text-[#f5f5f7]">Settings &gt; Pages</strong> in your repo. Choose branch <strong class="text-[#f5f5f7]">main</strong> and folder <strong class="text-[#f5f5f7]">/(root)</strong>, then save.</p>
+          </div>
+        </div>
+
+        <!-- Live URL preview -->
+        <div class="p-3.5 rounded-2xl bg-[#242426]/70 border border-white/10 flex items-center justify-between">
+          <div>
+            <div class="text-[10px] text-[#86868b] uppercase tracking-wider font-medium">Your Live URL</div>
+            <div class="font-mono text-xs text-[#2997ff]">https://&lt;username&gt;.github.io/resonance</div>
+          </div>
+          <span class="px-2.5 py-1 bg-[#30d158]/20 text-[#30d158] rounded-full text-[11px] font-medium">Free Forever</span>
+        </div>
+      </div>
+
+      <!-- Action Buttons in Modal -->
+      <div class="flex items-center justify-end gap-2.5 pt-1">
+        <button id="btnModalDownloadHtml" type="button" class="px-4 py-2 rounded-full bg-[#242426] hover:bg-[#2c2c2e] text-xs font-medium text-[#f5f5f7] border border-white/10 transition">
+          Download index.html
+        </button>
+        <button id="btnModalDownloadZip" type="button" class="px-4 py-2 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-xs font-medium text-white transition shadow-sm">
+          Download Full Repo (.zip)
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Toast Notification Container (iOS Capsule Style) -->
+  <div id="toastContainer" class="fixed bottom-6 right-6 z-50 flex flex-col gap-2 pointer-events-none"></div>
+
+  <!-- Audio Application Script -->
+  <script>
+    // State management
+    const appState = {
+      audioCtx: null,
+      audioBuffer: null,
+      sourceNode: null,
+      isPlaying: false,
+      isLooping: false,
+      isBypassed: false,
+      playbackStartTime: 0,
+      pausedAt: 0,
+      vizMode: 'bars', // 'bars' | 'wave'
+      activePreset: 'slowed-reverb',
+
+      // Audio Nodes
+      gainNode: null,
+      bassFilter: null,
+      highCutFilter: null,
+      convolverNode: null,
+      wetGainNode: null,
+      dryGainNode: null,
+      analyserNode: null,
+      noiseSourceNode: null,
+      noiseGainNode: null,
+
+      // Settings
+      speed: 0.85,
+      pitchSemi: 0,
+      reverbSpace: 'cathedral',
+      reverbMix: 45, // percent
+      reverbDecay: 4.0, // seconds
+      bassBoost: 6.0, // dB
+      highCut: 14000, // Hz
+      volume: 0.85,
+      noiseEnabled: false,
+      noiseVolume: 0.15,
+
+      // Cache for generated impulses
+      impulseCache: {},
+    };
+
+    // DOM Elements
+    const dropZone = document.getElementById('dropZone');
+    const audioFileInput = document.getElementById('audioFileInput');
+    const uploadPrompt = document.getElementById('uploadPrompt');
+    const trackInfoPanel = document.getElementById('trackInfoPanel');
+    const trackTitle = document.getElementById('trackTitle');
+    const trackDuration = document.getElementById('trackDuration');
+    const trackSampleRate = document.getElementById('trackSampleRate');
+    const btnBrowseFile = document.getElementById('btnBrowseFile');
+    const btnReplaceTrack = document.getElementById('btnReplaceTrack');
+    const btnDemoTrack = document.getElementById('btnDemoTrack');
+
+    const visualizerCanvas = document.getElementById('visualizerCanvas');
+    const canvasCtx = visualizerCanvas.getContext('2d');
+    const canvasEmptyMessage = document.getElementById('canvasEmptyMessage');
+    const btnVizBars = document.getElementById('btnVizBars');
+    const btnVizWave = document.getElementById('btnVizWave');
+
+    const timeCurrent = document.getElementById('timeCurrent');
+    const timeDuration = document.getElementById('timeDuration');
+    const seekSlider = document.getElementById('seekSlider');
+
+    const btnPlayPause = document.getElementById('btnPlayPause');
+    const playIcon = document.getElementById('playIcon');
+    const pauseIcon = document.getElementById('pauseIcon');
+    const playPauseText = document.getElementById('playPauseText');
+    const btnRewind = document.getElementById('btnRewind');
+    const btnForward = document.getElementById('btnForward');
+    const btnLoop = document.getElementById('btnLoop');
+    const btnBypass = document.getElementById('btnBypass');
+    const bypassStatus = document.getElementById('bypassStatus');
+
+    const volumeSlider = document.getElementById('volumeSlider');
+    const btnMute = document.getElementById('btnMute');
+    const volumeIcon = document.getElementById('volumeIcon');
+    const btnExportWav = document.getElementById('btnExportWav');
+    const renderProgressBanner = document.getElementById('renderProgressBanner');
+    const renderProgressBar = document.getElementById('renderProgressBar');
+    const renderProgressText = document.getElementById('renderProgressText');
+
+    const speedSlider = document.getElementById('speedSlider');
+    const speedBadge = document.getElementById('speedBadge');
+    const speedValueText = document.getElementById('speedValueText');
+    const btnSnapSpeedDefault = document.getElementById('btnSnapSpeedDefault');
+
+    const pitchSlider = document.getElementById('pitchSlider');
+    const pitchValueText = document.getElementById('pitchValueText');
+    const btnSnapPitchZero = document.getElementById('btnSnapPitchZero');
+
+    const reverbSpaceSelect = document.getElementById('reverbSpaceSelect');
+    const reverbSpaceBadge = document.getElementById('reverbSpaceBadge');
+    const reverbMixSlider = document.getElementById('reverbMixSlider');
+    const reverbMixValueText = document.getElementById('reverbMixValueText');
+    const reverbDecaySlider = document.getElementById('reverbDecaySlider');
+    const reverbDecayValueText = document.getElementById('reverbDecayValueText');
+
+    const bassBoostSlider = document.getElementById('bassBoostSlider');
+    const bassBoostValueText = document.getElementById('bassBoostValueText');
+    const highCutSlider = document.getElementById('highCutSlider');
+    const highCutValueText = document.getElementById('highCutValueText');
+
+    const btnToggleNoise = document.getElementById('btnToggleNoise');
+    const noiseToggleText = document.getElementById('noiseToggleText');
+    const noiseVolumeContainer = document.getElementById('noiseVolumeContainer');
+    const noiseVolumeSlider = document.getElementById('noiseVolumeSlider');
+    const noiseVolumeText = document.getElementById('noiseVolumeText');
+
+    const btnResetAll = document.getElementById('btnResetAll');
+    const btnGithubGuide = document.getElementById('btnGithubGuide');
+    const btnDownloadZip = document.getElementById('btnDownloadZip');
+    const githubModal = document.getElementById('githubModal');
+    const btnCloseModal = document.getElementById('btnCloseModal');
+    const btnModalDownloadHtml = document.getElementById('btnModalDownloadHtml');
+    const btnModalDownloadZip = document.getElementById('btnModalDownloadZip');
+
+    // Apple iOS-Style Capsule Toast System
+    function showToast(message, type = 'info') {
+      const container = document.getElementById('toastContainer');
+      const toast = document.createElement('div');
+      toast.className = 'px-4 py-2.5 rounded-full bg-[#1c1c1e]/90 backdrop-blur-2xl border border-white/15 shadow-2xl flex items-center gap-2.5 text-xs text-[#f5f5f7] transform transition-all duration-300 opacity-0 translate-y-2 pointer-events-auto font-medium';
+      
+      let dotColor = '#2997ff';
+      if (type === 'success') dotColor = '#30d158';
+      if (type === 'warn') dotColor = '#ff9f0a';
+
+      toast.innerHTML = `
+        <span style="color: ${dotColor};">●</span>
+        <span>${message}</span>
+      `;
+      container.appendChild(toast);
+      
+      requestAnimationFrame(() => {
+        toast.classList.remove('opacity-0', 'translate-y-2');
+        toast.classList.add('opacity-100', 'translate-y-0');
+      });
+
+      setTimeout(() => {
+        toast.classList.add('opacity-0', 'translate-y-2');
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    }
+
+    // Audio Context Initializer
+    function getOrCreateAudioContext() {
+      if (!appState.audioCtx) {
+        const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
+        appState.audioCtx = new AudioCtxClass();
+      }
+      if (appState.audioCtx.state === 'suspended') {
+        appState.audioCtx.resume();
+      }
+      return appState.audioCtx;
+    }
+
+    // Algorithmic Impulse Response Generator for Reverb
+    function generateImpulseResponse(ctx, spaceType, duration) {
+      const sampleRate = ctx.sampleRate;
+      const length = Math.floor(sampleRate * Math.max(0.5, Math.min(10.0, duration)));
+      const impulse = ctx.createBuffer(2, length, sampleRate);
+      const left = impulse.getChannelData(0);
+      const right = impulse.getChannelData(1);
+
+      let decayExp = 2.0;
+      let preDelay = 0.02; // seconds
+      let diffusion = 1.0;
+
+      if (spaceType === 'cathedral') {
+        decayExp = 1.6;
+        preDelay = 0.04;
+      } else if (spaceType === 'hall') {
+        decayExp = 2.2;
+        preDelay = 0.025;
+      } else if (spaceType === 'ethereal') {
+        decayExp = 1.2;
+        preDelay = 0.05;
+        diffusion = 1.2;
+      } else if (spaceType === 'room') {
+        decayExp = 3.5;
+        preDelay = 0.01;
+      } else if (spaceType === 'underwater') {
+        decayExp = 2.5;
+        preDelay = 0.03;
+      }
+
+      const preDelaySamples = Math.floor(sampleRate * preDelay);
+
+      for (let i = 0; i < length; i++) {
+        if (i < preDelaySamples) {
+          left[i] = 0;
+          right[i] = 0;
+          continue;
+        }
+        const t = (i - preDelaySamples) / (length - preDelaySamples);
+        const envelope = Math.pow(1 - t, decayExp);
+        
+        // Filter damping for high frequencies towards tail
+        const damp = spaceType === 'underwater' ? (1 - t * 0.8) : (1 - t * 0.4);
+
+        left[i] = ((Math.random() * 2) - 1) * envelope * damp;
+        right[i] = ((Math.random() * 2) - 1) * envelope * damp * diffusion;
+      }
+
+      return impulse;
+    }
+
+    // Build the Web Audio Graph
+    function setupAudioGraph() {
+      const ctx = getOrCreateAudioContext();
+
+      // Master Gain
+      appState.gainNode = ctx.createGain();
+      appState.gainNode.gain.value = appState.volume;
+
+      // Bass Boost Filter (LowShelf at 120Hz)
+      appState.bassFilter = ctx.createBiquadFilter();
+      appState.bassFilter.type = 'lowshelf';
+      appState.bassFilter.frequency.value = 120;
+      appState.bassFilter.gain.value = appState.isBypassed ? 0 : appState.bassBoost;
+
+      // High Cut Filter (Lowpass at highCut Hz)
+      appState.highCutFilter = ctx.createBiquadFilter();
+      appState.highCutFilter.type = 'lowpass';
+      appState.highCutFilter.frequency.value = appState.isBypassed ? 20000 : appState.highCut;
+
+      // Reverb Nodes
+      appState.convolverNode = ctx.createConvolver();
+      appState.convolverNode.buffer = generateImpulseResponse(ctx, appState.reverbSpace, appState.reverbDecay);
+
+      appState.wetGainNode = ctx.createGain();
+      appState.dryGainNode = ctx.createGain();
+
+      const wet = appState.isBypassed ? 0 : (appState.reverbMix / 100);
+      const dry = appState.isBypassed ? 1.0 : (1.0 - (appState.reverbMix / 100) * 0.4);
+      appState.wetGainNode.gain.value = wet;
+      appState.dryGainNode.gain.value = dry;
+
+      // Analyser Node for Visualizer
+      appState.analyserNode = ctx.createAnalyser();
+      appState.analyserNode.fftSize = 256;
+      appState.analyserNode.smoothingTimeConstant = 0.8;
+
+      // Chain Filter -> Split to Dry & Convolver -> Reconnect -> Master Gain -> Analyser -> Destination
+      appState.bassFilter.connect(appState.highCutFilter);
+
+      // Dry path
+      appState.highCutFilter.connect(appState.dryGainNode);
+      appState.dryGainNode.connect(appState.gainNode);
+
+      // Wet path
+      appState.highCutFilter.connect(appState.convolverNode);
+      appState.convolverNode.connect(appState.wetGainNode);
+      appState.wetGainNode.connect(appState.gainNode);
+
+      // Master to analyser & speakers
+      appState.gainNode.connect(appState.analyserNode);
+      appState.analyserNode.connect(ctx.destination);
+
+      // Tape / Vinyl Noise Node (Optional procedural noise)
+      setupNoiseNode(ctx);
+    }
+
+    // Procedural Lo-Fi Vinyl / Tape Noise Generator
+    function setupNoiseNode(ctx) {
+      if (appState.noiseSourceNode) {
+        try { appState.noiseSourceNode.stop(); } catch(e) {}
+      }
+
+      const bufferSize = ctx.sampleRate * 2; // 2 seconds looped noise buffer
+      const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+      const output = noiseBuffer.getChannelData(0);
+
+      let lastOut = 0.0;
+      for (let i = 0; i < bufferSize; i++) {
+        const white = Math.random() * 2 - 1;
+        output[i] = (lastOut + (0.02 * white)) / 1.02;
+        lastOut = output[i];
+        output[i] *= 2.5;
+
+        if (Math.random() < 0.0003) {
+          output[i] += (Math.random() * 2 - 1) * 0.8;
+        }
+      }
+
+      appState.noiseSourceNode = ctx.createBufferSource();
+      appState.noiseSourceNode.buffer = noiseBuffer;
+      appState.noiseSourceNode.loop = true;
+
+      const noiseFilter = ctx.createBiquadFilter();
+      noiseFilter.type = 'bandpass';
+      noiseFilter.frequency.value = 1800;
+      noiseFilter.Q.value = 1.0;
+
+      appState.noiseGainNode = ctx.createGain();
+      appState.noiseGainNode.gain.value = appState.noiseEnabled ? appState.noiseVolume * 0.15 : 0;
+
+      appState.noiseSourceNode.connect(noiseFilter);
+      noiseFilter.connect(appState.noiseGainNode);
+      appState.noiseGainNode.connect(ctx.destination);
+
+      appState.noiseSourceNode.start(0);
+    }
+
+    // Update real-time audio parameters
+    function updateAudioParams() {
+      if (!appState.audioCtx) return;
+
+      // Playback speed & detune
+      if (appState.sourceNode) {
+        const rate = appState.isBypassed ? 1.0 : appState.speed;
+        appState.sourceNode.playbackRate.value = rate;
+        if (appState.sourceNode.detune) {
+          appState.sourceNode.detune.value = appState.isBypassed ? 0 : (appState.pitchSemi * 100);
+        }
+      }
+
+      // Bass Boost
+      if (appState.bassFilter) {
+        appState.bassFilter.gain.value = appState.isBypassed ? 0 : appState.bassBoost;
+      }
+
+      // High Cut
+      if (appState.highCutFilter) {
+        appState.highCutFilter.frequency.value = appState.isBypassed ? 20000 : appState.highCut;
+      }
+
+      // Reverb Wet / Dry
+      if (appState.wetGainNode && appState.dryGainNode) {
+        const wet = appState.isBypassed ? 0 : (appState.reverbMix / 100);
+        const dry = appState.isBypassed ? 1.0 : (1.0 - (appState.reverbMix / 100) * 0.4);
+        appState.wetGainNode.gain.value = wet;
+        appState.dryGainNode.gain.value = dry;
+      }
+
+      // Volume
+      if (appState.gainNode) {
+        appState.gainNode.gain.value = appState.volume;
+      }
+
+      // Noise
+      if (appState.noiseGainNode) {
+        appState.noiseGainNode.gain.value = (appState.noiseEnabled && !appState.isBypassed) ? (appState.noiseVolume * 0.15) : 0;
+      }
+    }
+
+    // Rebuild Reverb Convolver when space or decay changes
+    function refreshReverbBuffer() {
+      if (!appState.audioCtx || !appState.convolverNode) return;
+      appState.convolverNode.buffer = generateImpulseResponse(appState.audioCtx, appState.reverbSpace, appState.reverbDecay);
+    }
+
+    // Playback control
+    function playTrack(offset = 0) {
+      if (!appState.audioBuffer) return;
+      const ctx = getOrCreateAudioContext();
+
+      if (!appState.gainNode) {
+        setupAudioGraph();
+      }
+
+      if (appState.sourceNode) {
+        try {
+          appState.sourceNode.onended = null;
+          appState.sourceNode.stop();
+        } catch(e) {}
+      }
+
+      appState.sourceNode = ctx.createBufferSource();
+      appState.sourceNode.buffer = appState.audioBuffer;
+      appState.sourceNode.loop = appState.isLooping;
+
+      const rate = appState.isBypassed ? 1.0 : appState.speed;
+      appState.sourceNode.playbackRate.value = rate;
+      if (appState.sourceNode.detune) {
+        appState.sourceNode.detune.value = appState.isBypassed ? 0 : (appState.pitchSemi * 100);
+      }
+
+      appState.sourceNode.connect(appState.bassFilter);
+
+      const clampedOffset = Math.max(0, Math.min(appState.audioBuffer.duration, offset));
+      appState.sourceNode.start(0, clampedOffset);
+      appState.playbackStartTime = ctx.currentTime - (clampedOffset / rate);
+      appState.pausedAt = clampedOffset;
+      appState.isPlaying = true;
+
+      appState.sourceNode.onended = () => {
+        if (!appState.isLooping && appState.isPlaying) {
+          appState.isPlaying = false;
+          appState.pausedAt = 0;
+          updatePlayPauseButtonUI();
+        }
+      };
+
+      updatePlayPauseButtonUI();
+      canvasEmptyMessage.classList.add('hidden');
+    }
+
+    function pauseTrack() {
+      if (!appState.isPlaying || !appState.sourceNode) return;
+      const ctx = appState.audioCtx;
+      const rate = appState.isBypassed ? 1.0 : appState.speed;
+      appState.pausedAt = (ctx.currentTime - appState.playbackStartTime) * rate;
+      
+      try {
+        appState.sourceNode.onended = null;
+        appState.sourceNode.stop();
+      } catch(e) {}
+
+      appState.isPlaying = false;
+      updatePlayPauseButtonUI();
+    }
+
+    function togglePlayPause() {
+      if (!appState.audioBuffer) {
+        showToast('Please upload an audio file or click "Demo Track" first.', 'warn');
+        return;
+      }
+      if (appState.isPlaying) {
+        pauseTrack();
+      } else {
+        const offset = appState.pausedAt >= appState.audioBuffer.duration ? 0 : appState.pausedAt;
+        playTrack(offset);
+      }
+    }
+
+    function updatePlayPauseButtonUI() {
+      if (appState.isPlaying) {
+        playIcon.classList.add('hidden');
+        pauseIcon.classList.remove('hidden');
+        playPauseText.textContent = 'Pause';
+      } else {
+        playIcon.classList.remove('hidden');
+        pauseIcon.classList.add('hidden');
+        playPauseText.textContent = 'Play';
+      }
+    }
+
+    // Format seconds to mm:ss
+    function formatTime(sec) {
+      if (isNaN(sec) || sec < 0) return '0:00';
+      const m = Math.floor(sec / 60);
+      const s = Math.floor(sec % 60);
+      return `${m}:${s < 10 ? '0' : ''}${s}`;
+    }
+
+    // Decode Audio File
+    function loadAudioFile(file) {
+      const ctx = getOrCreateAudioContext();
+      showToast(`Loading "${file.name}"...`, 'info');
+
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const arrayBuffer = e.target.result;
+        ctx.decodeAudioData(arrayBuffer, function(decodedBuffer) {
+          appState.audioBuffer = decodedBuffer;
+          appState.pausedAt = 0;
+          if (appState.isPlaying) pauseTrack();
+
+          trackTitle.textContent = file.name;
+          trackDuration.textContent = formatTime(decodedBuffer.duration);
+          trackSampleRate.textContent = `${(decodedBuffer.sampleRate / 1000).toFixed(1)} kHz`;
+          timeDuration.textContent = formatTime(decodedBuffer.duration);
+          timeCurrent.textContent = '0:00';
+          seekSlider.value = 0;
+
+          uploadPrompt.classList.add('hidden');
+          trackInfoPanel.classList.remove('hidden');
+          canvasEmptyMessage.classList.add('hidden');
+
+          showToast(`"${file.name}" ready to remix.`, 'success');
+          playTrack(0);
+        }, function(err) {
+          showToast('Failed to decode audio file.', 'warn');
+        });
+      };
+      reader.readAsArrayBuffer(file);
+    }
+
+    // Synthesize a Chill Lo-Fi / Synthwave Demo Track in Browser
+    function generateDemoTrack() {
+      const ctx = getOrCreateAudioContext();
+      showToast('Generating studio demo track...', 'info');
+
+      const sampleRate = ctx.sampleRate;
+      const duration = 16.0;
+      const length = Math.floor(sampleRate * duration);
+      
+      const offlineCtx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(2, length, sampleRate);
+
+      const chordProgressions = [
+        [261.63, 329.63, 392.00, 493.88], // Cmaj7
+        [220.00, 261.63, 329.63, 392.00], // Am7
+        [293.66, 349.23, 440.00, 523.25], // Dm7
+        [196.00, 246.94, 293.66, 392.00], // G7
+      ];
+
+      chordProgressions.forEach((chord, step) => {
+        const startTime = step * 4.0;
+        chord.forEach((freq, i) => {
+          const osc = offlineCtx.createOscillator();
+          osc.type = i % 2 === 0 ? 'triangle' : 'sine';
+          osc.frequency.setValueAtTime(freq, startTime);
+
+          const gain = offlineCtx.createGain();
+          gain.gain.setValueAtTime(0, startTime);
+          gain.gain.linearRampToValueAtTime(0.08, startTime + 0.1);
+          gain.gain.exponentialRampToValueAtTime(0.001, startTime + 3.8);
+
+          osc.connect(gain);
+          gain.connect(offlineCtx.destination);
+
+          osc.start(startTime);
+          osc.stop(startTime + 3.9);
+        });
+
+        const bassOsc = offlineCtx.createOscillator();
+        bassOsc.type = 'sine';
+        const bassFreq = chord[0] / 2;
+        bassOsc.frequency.setValueAtTime(bassFreq, startTime);
+
+        const bassGain = offlineCtx.createGain();
+        bassGain.gain.setValueAtTime(0, startTime);
+        bassGain.gain.linearRampToValueAtTime(0.18, startTime + 0.05);
+        bassGain.gain.exponentialRampToValueAtTime(0.001, startTime + 3.6);
+
+        bassOsc.connect(bassGain);
+        bassGain.connect(offlineCtx.destination);
+
+        bassOsc.start(startTime);
+        bassOsc.stop(startTime + 3.8);
+      });
+
+      for (let beat = 0; beat < 16; beat++) {
+        const beatTime = beat * 1.0;
+        if (beat % 2 === 0) {
+          const kick = offlineCtx.createOscillator();
+          kick.frequency.setValueAtTime(140, beatTime);
+          kick.frequency.exponentialRampToValueAtTime(40, beatTime + 0.2);
+
+          const kickGain = offlineCtx.createGain();
+          kickGain.gain.setValueAtTime(0.25, beatTime);
+          kickGain.gain.exponentialRampToValueAtTime(0.001, beatTime + 0.25);
+
+          kick.connect(kickGain);
+          kickGain.connect(offlineCtx.destination);
+
+          kick.start(beatTime);
+          kick.stop(beatTime + 0.25);
+        } else {
+          const snare = offlineCtx.createOscillator();
+          snare.type = 'triangle';
+          snare.frequency.setValueAtTime(200, beatTime);
+
+          const snareGain = offlineCtx.createGain();
+          snareGain.gain.setValueAtTime(0.12, beatTime);
+          snareGain.gain.exponentialRampToValueAtTime(0.001, beatTime + 0.18);
+
+          snare.connect(snareGain);
+          snareGain.connect(offlineCtx.destination);
+
+          snare.start(beatTime);
+          snare.stop(beatTime + 0.2);
+        }
+      }
+
+      offlineCtx.startRendering().then(renderedBuffer => {
+        appState.audioBuffer = renderedBuffer;
+        appState.pausedAt = 0;
+        if (appState.isPlaying) pauseTrack();
+
+        trackTitle.textContent = "Dreamwave Sunset (Demo Track).wav";
+        trackDuration.textContent = formatTime(renderedBuffer.duration);
+        trackSampleRate.textContent = `${(renderedBuffer.sampleRate / 1000).toFixed(1)} kHz`;
+        timeDuration.textContent = formatTime(renderedBuffer.duration);
+        timeCurrent.textContent = '0:00';
+        seekSlider.value = 0;
+
+        uploadPrompt.classList.add('hidden');
+        trackInfoPanel.classList.remove('hidden');
+        canvasEmptyMessage.classList.add('hidden');
+
+        showToast('Demo track ready! Applying Slowed + Reverb.', 'success');
+        applyPreset('slowed-reverb');
+        playTrack(0);
+      });
+    }
+
+    // Real-Time Canvas Visualizer Loop (Apple Music Aesthetic)
+    function resizeCanvas() {
+      const rect = visualizerCanvas.parentElement.getBoundingClientRect();
+      visualizerCanvas.width = rect.width * (window.devicePixelRatio || 1);
+      visualizerCanvas.height = rect.height * (window.devicePixelRatio || 1);
+    }
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
+
+    function drawVisualizer() {
+      requestAnimationFrame(drawVisualizer);
+
+      const width = visualizerCanvas.width;
+      const height = visualizerCanvas.height;
+
+      if (appState.isPlaying && appState.audioBuffer && appState.audioCtx) {
+        const rate = appState.isBypassed ? 1.0 : appState.speed;
+        const currentSec = (appState.audioCtx.currentTime - appState.playbackStartTime) * rate;
+        const durationSec = appState.audioBuffer.duration;
+        const boundedSec = Math.max(0, Math.min(durationSec, currentSec));
+
+        timeCurrent.textContent = formatTime(boundedSec);
+        seekSlider.value = (boundedSec / durationSec) * 100;
+      }
+
+      canvasCtx.clearRect(0, 0, width, height);
+
+      if (!appState.analyserNode || !appState.isPlaying) {
+        canvasCtx.beginPath();
+        canvasCtx.moveTo(0, height / 2);
+        canvasCtx.lineTo(width, height / 2);
+        canvasCtx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+        canvasCtx.lineWidth = 1.5;
+        canvasCtx.stroke();
+        return;
+      }
+
+      if (appState.vizMode === 'bars') {
+        const bufferLength = appState.analyserNode.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+        appState.analyserNode.getByteFrequencyData(dataArray);
+
+        const barCount = 44;
+        const barWidth = (width / barCount) * 0.70;
+        const gap = (width / barCount) * 0.30;
+
+        for (let i = 0; i < barCount; i++) {
+          const index = Math.floor((i / barCount) * (bufferLength * 0.75));
+          const val = dataArray[index] / 255.0;
+          const barHeight = val * (height * 0.85);
+
+          const x = i * (barWidth + gap);
+          const y = height - barHeight;
+
+          // Apple Siri / Apple Music Spectrum (Cyan to Blue to Purple)
+          const grad = canvasCtx.createLinearGradient(0, height, 0, y);
+          grad.addColorStop(0, '#0071e3');
+          grad.addColorStop(0.5, '#64d2ff');
+          grad.addColorStop(1, '#af52de');
+
+          canvasCtx.fillStyle = grad;
+          canvasCtx.beginPath();
+          canvasCtx.roundRect(x, y, barWidth, barHeight, [4, 4, 0, 0]);
+          canvasCtx.fill();
+        }
+      } else {
+        const bufferLength = appState.analyserNode.fftSize;
+        const dataArray = new Uint8Array(bufferLength);
+        appState.analyserNode.getByteTimeDomainData(dataArray);
+
+        canvasCtx.lineWidth = 2.5;
+        const grad = canvasCtx.createLinearGradient(0, 0, width, 0);
+        grad.addColorStop(0, '#2997ff');
+        grad.addColorStop(0.5, '#64d2ff');
+        grad.addColorStop(1, '#af52de');
+        canvasCtx.strokeStyle = grad;
+
+        canvasCtx.beginPath();
+        const sliceWidth = width / bufferLength;
+        let x = 0;
+
+        for (let i = 0; i < bufferLength; i++) {
+          const v = dataArray[i] / 128.0;
+          const y = (v * height) / 2;
+
+          if (i === 0) {
+            canvasCtx.moveTo(x, y);
+          } else {
+            canvasCtx.lineTo(x, y);
+          }
+          x += sliceWidth;
+        }
+
+        canvasCtx.stroke();
+      }
+    }
+    drawVisualizer();
+
+    // Preset configurations
+    const PRESETS = {
+      'slowed-reverb': {
+        name: 'Slowed + Reverb',
+        speed: 0.85,
+        pitchSemi: 0,
+        space: 'cathedral',
+        decay: 4.5,
+        mix: 45,
+        bass: 7.0,
+        highCut: 13500,
+        noise: false,
+      },
+      'nightcore': {
+        name: 'Nightcore',
+        speed: 1.25,
+        pitchSemi: 0,
+        space: 'hall',
+        decay: 2.2,
+        mix: 20,
+        bass: 2.0,
+        highCut: 19500,
+        noise: false,
+      },
+      'daycore': {
+        name: 'Daycore / Deep',
+        speed: 0.76,
+        pitchSemi: -4,
+        space: 'cathedral',
+        decay: 5.5,
+        mix: 50,
+        bass: 9.0,
+        highCut: 11000,
+        noise: false,
+      },
+      'vaporwave': {
+        name: 'Vaporwave \'88',
+        speed: 0.82,
+        pitchSemi: -1,
+        space: 'ethereal',
+        decay: 3.8,
+        mix: 40,
+        bass: 5.0,
+        highCut: 9500,
+        noise: true,
+        noiseVol: 0.18,
+      },
+      'underwater': {
+        name: 'Underwater',
+        speed: 0.88,
+        pitchSemi: -2,
+        space: 'underwater',
+        decay: 4.8,
+        mix: 65,
+        bass: 10.0,
+        highCut: 3500,
+        noise: false,
+      },
+      'cathedral': {
+        name: 'Cathedral Void',
+        speed: 0.90,
+        pitchSemi: 0,
+        space: 'cathedral',
+        decay: 7.0,
+        mix: 65,
+        bass: 4.0,
+        highCut: 16000,
+        noise: false,
+      },
+      'original': {
+        name: 'Clean Studio',
+        speed: 1.00,
+        pitchSemi: 0,
+        space: 'room',
+        decay: 1.0,
+        mix: 0,
+        bass: 0,
+        highCut: 20000,
+        noise: false,
+      }
+    };
+
+    function applyPreset(presetKey) {
+      const p = PRESETS[presetKey];
+      if (!p) return;
+
+      appState.activePreset = presetKey;
+      appState.speed = p.speed;
+      appState.pitchSemi = p.pitchSemi;
+      appState.reverbSpace = p.space;
+      appState.reverbDecay = p.decay;
+      appState.reverbMix = p.mix;
+      appState.bassBoost = p.bass;
+      appState.highCut = p.highCut;
+      appState.noiseEnabled = p.noise || false;
+      if (p.noiseVol) appState.noiseVolume = p.noiseVol;
+
+      // Sync UI sliders & labels
+      speedSlider.value = appState.speed;
+      speedValueText.textContent = `${Math.round(appState.speed * 100)}%`;
+      speedBadge.textContent = `${appState.speed.toFixed(2)}x`;
+
+      pitchSlider.value = appState.pitchSemi;
+      pitchValueText.textContent = `${appState.pitchSemi > 0 ? '+' : ''}${appState.pitchSemi} semitones`;
+
+      reverbSpaceSelect.value = appState.reverbSpace;
+      reverbSpaceBadge.textContent = appState.reverbSpace.charAt(0).toUpperCase() + appState.reverbSpace.slice(1);
+      reverbMixSlider.value = appState.reverbMix;
+      reverbMixValueText.textContent = `${appState.reverbMix}%`;
+      reverbDecaySlider.value = appState.reverbDecay;
+      reverbDecayValueText.textContent = `${appState.reverbDecay.toFixed(1)}s`;
+
+      bassBoostSlider.value = appState.bassBoost;
+      bassBoostValueText.textContent = `+${appState.bassBoost} dB`;
+
+      highCutSlider.value = appState.highCut;
+      highCutValueText.textContent = `${(appState.highCut / 1000).toFixed(1)} kHz`;
+
+      noiseToggleText.textContent = appState.noiseEnabled ? 'Active' : 'Disabled';
+      if (appState.noiseEnabled) {
+        noiseVolumeContainer.classList.remove('hidden');
+        btnToggleNoise.classList.add('bg-[#af52de]', 'text-white');
+      } else {
+        noiseVolumeContainer.classList.add('hidden');
+        btnToggleNoise.classList.remove('bg-[#af52de]', 'text-white');
+      }
+
+      refreshReverbBuffer();
+      updateAudioParams();
+      showToast(`Preset "${p.name}" applied`, 'info');
+    }
+
+    // WAV Encoder (16-bit PCM Stereo)
+    function encodeWAV(audioBuffer) {
+      const numChannels = audioBuffer.numberOfChannels;
+      const sampleRate = audioBuffer.sampleRate;
+      const format = 1; // PCM
+      const bitDepth = 16;
+      
+      const bytesPerSample = bitDepth / 8;
+      const blockAlign = numChannels * bytesPerSample;
+      const length = audioBuffer.length;
+      const byteRate = sampleRate * blockAlign;
+      const dataSize = length * blockAlign;
+      const headerSize = 44;
+      const totalSize = headerSize + dataSize;
+      
+      const arrayBuffer = new ArrayBuffer(totalSize);
+      const view = new DataView(arrayBuffer);
+      
+      function writeString(v, offset, str) {
+        for (let i = 0; i < str.length; i++) {
+          v.setUint8(offset + i, str.charCodeAt(i));
+        }
+      }
+      
+      writeString(view, 0, 'RIFF');
+      view.setUint32(4, 36 + dataSize, true);
+      writeString(view, 8, 'WAVE');
+      writeString(view, 12, 'fmt ');
+      view.setUint32(16, 16, true);
+      view.setUint16(20, format, true);
+      view.setUint16(22, numChannels, true);
+      view.setUint32(24, sampleRate, true);
+      view.setUint32(28, byteRate, true);
+      view.setUint16(32, blockAlign, true);
+      view.setUint16(34, bitDepth, true);
+      writeString(view, 36, 'data');
+      view.setUint32(40, dataSize, true);
+      
+      const channels = [];
+      for (let ch = 0; ch < numChannels; ch++) {
+        channels.push(audioBuffer.getChannelData(ch));
+      }
+      
+      let offset = 44;
+      for (let i = 0; i < length; i++) {
+        for (let ch = 0; ch < numChannels; ch++) {
+          let s = channels[ch][i];
+          s = Math.max(-1, Math.min(1, s));
+          const val = s < 0 ? s * 0x8000 : s * 0x7FFF;
+          view.setInt16(offset, val, true);
+          offset += 2;
+        }
+      }
+      
+      return new Blob([view], { type: 'audio/wav' });
+    }
+
+    // Offline Export to WAV
+    async function exportRemixedAudio() {
+      if (!appState.audioBuffer) {
+        showToast('Please load an audio file first.', 'warn');
+        return;
+      }
+
+      renderProgressBanner.classList.remove('hidden');
+      renderProgressBar.style.width = '10%';
+      renderProgressText.textContent = '10%';
+      btnExportWav.disabled = true;
+
+      try {
+        const srcBuffer = appState.audioBuffer;
+        const rate = appState.isBypassed ? 1.0 : appState.speed;
+        const effectiveDuration = (srcBuffer.duration / rate) + (appState.isBypassed ? 0.5 : appState.reverbDecay + 0.5);
+        const sampleRate = srcBuffer.sampleRate;
+        const totalSamples = Math.floor(sampleRate * effectiveDuration);
+
+        const OfflineCtxClass = window.OfflineAudioContext || window.webkitOfflineAudioContext;
+        const offlineCtx = new OfflineCtxClass(2, totalSamples, sampleRate);
+
+        const offlineSource = offlineCtx.createBufferSource();
+        offlineSource.buffer = srcBuffer;
+        offlineSource.playbackRate.value = rate;
+        if (offlineSource.detune) {
+          offlineSource.detune.value = appState.isBypassed ? 0 : (appState.pitchSemi * 100);
+        }
+
+        const offlineBass = offlineCtx.createBiquadFilter();
+        offlineBass.type = 'lowshelf';
+        offlineBass.frequency.value = 120;
+        offlineBass.gain.value = appState.isBypassed ? 0 : appState.bassBoost;
+
+        const offlineHigh = offlineCtx.createBiquadFilter();
+        offlineHigh.type = 'lowpass';
+        offlineHigh.frequency.value = appState.isBypassed ? 20000 : appState.highCut;
+
+        const offlineConvolver = offlineCtx.createConvolver();
+        offlineConvolver.buffer = generateImpulseResponse(offlineCtx, appState.reverbSpace, appState.reverbDecay);
+
+        const offlineWet = offlineCtx.createGain();
+        const offlineDry = offlineCtx.createGain();
+
+        const wet = appState.isBypassed ? 0 : (appState.reverbMix / 100);
+        const dry = appState.isBypassed ? 1.0 : (1.0 - (appState.reverbMix / 100) * 0.4);
+        offlineWet.gain.value = wet;
+        offlineDry.gain.value = dry;
+
+        const offlineMaster = offlineCtx.createGain();
+        offlineMaster.gain.value = appState.volume;
+
+        offlineSource.connect(offlineBass);
+        offlineBass.connect(offlineHigh);
+
+        offlineHigh.connect(offlineDry);
+        offlineDry.connect(offlineMaster);
+
+        offlineHigh.connect(offlineConvolver);
+        offlineConvolver.connect(offlineWet);
+        offlineWet.connect(offlineMaster);
+
+        offlineMaster.connect(offlineCtx.destination);
+
+        offlineSource.start(0);
+
+        renderProgressBar.style.width = '45%';
+        renderProgressText.textContent = '45%';
+
+        const renderedBuffer = await offlineCtx.startRendering();
+
+        renderProgressBar.style.width = '85%';
+        renderProgressText.textContent = '85% (Encoding WAV)';
+
+        const wavBlob = encodeWAV(renderedBuffer);
+        const downloadUrl = URL.createObjectURL(wavBlob);
+
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = downloadUrl;
+        const originalName = trackTitle.textContent.replace(/\.[^/.]+$/, "");
+        a.download = `${originalName}_slowed_reverb.wav`;
+        document.body.appendChild(a);
+        a.click();
+        
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(downloadUrl);
+        }, 1000);
+
+        renderProgressBar.style.width = '100%';
+        renderProgressText.textContent = '100% Done!';
+        showToast('Lossless WAV exported successfully', 'success');
+
+        setTimeout(() => {
+          renderProgressBanner.classList.add('hidden');
+          btnExportWav.disabled = false;
+        }, 2000);
+
+      } catch (err) {
+        showToast('Rendering error. Check audio settings.', 'warn');
+        renderProgressBanner.classList.add('hidden');
+        btnExportWav.disabled = false;
+      }
+    }
+
+    // Export entire GitHub Pages Repo as a ZIP file
+    async function exportGitHubRepoZip() {
+      showToast('Packaging GitHub Pages repository...', 'info');
+
+      try {
+        const zip = new JSZip();
+
+        const htmlContent = document.documentElement.outerHTML;
+        zip.file("index.html", "<!DOCTYPE html>\n" + htmlContent);
+
+        const readmeContent = `# Resonance — Apple-Inspired Slowed & Reverb Studio
+
+An ultra-sleek, client-side Slowed + Reverb, Nightcore, and Daycore audio processor and remixer. Built with modern Web Audio API, Apple-inspired aesthetics, and zero backend dependencies.
+
+## 🚀 Live Demo & Free Hosting on GitHub Pages
+
+This entire project runs 100% in the browser with **zero backend server costs**! You can host it on GitHub Pages for free in 3 quick steps:
+
+### Step 1: Create a GitHub Repository
+1. Log in to [GitHub](https://github.com/) (create an account if you don't have one).
+2. Click **New Repository** (top right \`+\` menu).
+3. Name your repository (e.g. \`slowed-reverb\` or \`<username>.github.io\`).
+4. Set visibility to **Public**.
+5. Click **Create repository**.
+
+### Step 2: Add Files
+1. Drag and drop the \`index.html\` file and this \`README.md\` into the repository on GitHub, or push via git:
+   \`\`\`bash
+   git init
+   git add .
+   git commit -m "Initial commit of Resonance Slowed & Reverb Studio"
+   git branch -M main
+   git remote add origin https://github.com/<your-username>/<your-repo-name>.git
+   git push -u origin main
+   \`\`\`
+
+### Step 3: Enable GitHub Pages
+1. Go to your repository's **Settings** tab.
+2. In the left sidebar, click **Pages**.
+3. Under **Branch**, select **main** (or \`master\`), leave the folder as **/(root)**, and click **Save**.
+4. In about 30 seconds, your site will be live at:
+   \`https://<your-username>.github.io/<your-repo-name>/\`
+`;
+        zip.file("README.md", readmeContent);
+
+        const content = await zip.generateAsync({ type: "blob" });
+        const downloadUrl = URL.createObjectURL(content);
+
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = downloadUrl;
+        a.download = "resonance-github-repo.zip";
+        document.body.appendChild(a);
+        a.click();
+
+        setTimeout(() => {
+          document.body.removeChild(a);
+          URL.revokeObjectURL(downloadUrl);
+        }, 1000);
+
+        showToast('Repository ZIP downloaded!', 'success');
+      } catch (e) {
+        showToast('Failed to bundle repository zip.', 'warn');
+      }
+    }
+
+    // Download standalone index.html
+    function downloadStandaloneHtml() {
+      const htmlContent = "<!DOCTYPE html>\n" + document.documentElement.outerHTML;
+      const blob = new Blob([htmlContent], { type: 'text/html' });
+      const downloadUrl = URL.createObjectURL(blob);
+
+      const a = document.createElement('a');
+      a.style.display = 'none';
+      a.href = downloadUrl;
+      a.download = "index.html";
+      document.body.appendChild(a);
+      a.click();
+
+      setTimeout(() => {
+        document.body.removeChild(a);
+        URL.revokeObjectURL(downloadUrl);
+      }, 1000);
+
+      showToast('index.html downloaded!', 'success');
+    }
+
+    // Event Listeners Wiring
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('border-[#0071e3]', 'bg-white/[0.02]');
+    });
+
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('border-[#0071e3]', 'bg-white/[0.02]');
+    });
+
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('border-[#0071e3]', 'bg-white/[0.02]');
+      if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
+        loadAudioFile(e.dataTransfer.files[0]);
+      }
+    });
+
+    audioFileInput.addEventListener('change', (e) => {
+      if (e.target.files && e.target.files.length > 0) {
+        loadAudioFile(e.target.files[0]);
+      }
+    });
+
+    btnReplaceTrack.addEventListener('click', () => {
+      audioFileInput.click();
+    });
+
+    btnDemoTrack.addEventListener('click', () => {
+      generateDemoTrack();
+    });
+
+    // Visualizer Mode Switch
+    btnVizBars.addEventListener('click', () => {
+      appState.vizMode = 'bars';
+      btnVizBars.classList.add('text-white', 'bg-[#3a3a3c]');
+      btnVizBars.classList.remove('text-[#86868b]');
+      btnVizWave.classList.remove('text-white', 'bg-[#3a3a3c]');
+      btnVizWave.classList.add('text-[#86868b]');
+    });
+
+    btnVizWave.addEventListener('click', () => {
+      appState.vizMode = 'wave';
+      btnVizWave.classList.add('text-white', 'bg-[#3a3a3c]');
+      btnVizWave.classList.remove('text-[#86868b]');
+      btnVizBars.classList.remove('text-white', 'bg-[#3a3a3c]');
+      btnVizBars.classList.add('text-[#86868b]');
+    });
+
+    // Transport Controls
+    btnPlayPause.addEventListener('click', togglePlayPause);
+
+    btnRewind.addEventListener('click', () => {
+      if (!appState.audioBuffer) return;
+      const rate = appState.isBypassed ? 1.0 : appState.speed;
+      const current = appState.isPlaying ? 
+        ((appState.audioCtx.currentTime - appState.playbackStartTime) * rate) : appState.pausedAt;
+      const target = Math.max(0, current - 5);
+      if (appState.isPlaying) {
+        playTrack(target);
+      } else {
+        appState.pausedAt = target;
+        timeCurrent.textContent = formatTime(target);
+        seekSlider.value = (target / appState.audioBuffer.duration) * 100;
+      }
+    });
+
+    btnForward.addEventListener('click', () => {
+      if (!appState.audioBuffer) return;
+      const rate = appState.isBypassed ? 1.0 : appState.speed;
+      const current = appState.isPlaying ? 
+        ((appState.audioCtx.currentTime - appState.playbackStartTime) * rate) : appState.pausedAt;
+      const target = Math.min(appState.audioBuffer.duration, current + 5);
+      if (appState.isPlaying) {
+        playTrack(target);
+      } else {
+        appState.pausedAt = target;
+        timeCurrent.textContent = formatTime(target);
+        seekSlider.value = (target / appState.audioBuffer.duration) * 100;
+      }
+    });
+
+    btnLoop.addEventListener('click', () => {
+      appState.isLooping = !appState.isLooping;
+      if (appState.sourceNode) {
+        appState.sourceNode.loop = appState.isLooping;
+      }
+      if (appState.isLooping) {
+        btnLoop.classList.add('bg-white/20', 'text-white');
+        showToast('Loop enabled', 'info');
+      } else {
+        btnLoop.classList.remove('bg-white/20', 'text-white');
+        showToast('Loop disabled', 'info');
+      }
+    });
+
+    btnBypass.addEventListener('click', () => {
+      appState.isBypassed = !appState.isBypassed;
+      bypassStatus.textContent = appState.isBypassed ? 'ON (Original)' : 'OFF';
+      bypassStatus.className = appState.isBypassed ? 'text-[#ff9f0a] font-bold' : 'text-[#f5f5f7]';
+      
+      if (appState.isBypassed) {
+        btnBypass.classList.add('border-[#ff9f0a]/40', 'bg-[#ff9f0a]/10');
+      } else {
+        btnBypass.classList.remove('border-[#ff9f0a]/40', 'bg-[#ff9f0a]/10');
+      }
+
+      updateAudioParams();
+      showToast(appState.isBypassed ? 'FX Bypassed (Original)' : 'FX Active', 'info');
+    });
+
+    // Seek Slider
+    seekSlider.addEventListener('input', (e) => {
+      if (!appState.audioBuffer) return;
+      const percent = parseFloat(e.target.value);
+      const targetSec = (percent / 100) * appState.audioBuffer.duration;
+      timeCurrent.textContent = formatTime(targetSec);
+      if (appState.isPlaying) {
+        playTrack(targetSec);
+      } else {
+        appState.pausedAt = targetSec;
+      }
+    });
+
+    // Volume Slider
+    volumeSlider.addEventListener('input', (e) => {
+      appState.volume = parseFloat(e.target.value);
+      if (appState.gainNode) {
+        appState.gainNode.gain.value = appState.volume;
+      }
+    });
+
+    btnMute.addEventListener('click', () => {
+      if (appState.volume > 0) {
+        volumeSlider.dataset.prevVolume = appState.volume;
+        appState.volume = 0;
+        volumeSlider.value = 0;
+      } else {
+        appState.volume = parseFloat(volumeSlider.dataset.prevVolume || 0.85);
+        volumeSlider.value = appState.volume;
+      }
+      if (appState.gainNode) {
+        appState.gainNode.gain.value = appState.volume;
+      }
+    });
+
+    // Speed Slider
+    speedSlider.addEventListener('input', (e) => {
+      appState.speed = parseFloat(e.target.value);
+      speedValueText.textContent = `${Math.round(appState.speed * 100)}%`;
+      speedBadge.textContent = `${appState.speed.toFixed(2)}x`;
+      updateAudioParams();
+    });
+
+    btnSnapSpeedDefault.addEventListener('click', () => {
+      appState.speed = 1.0;
+      speedSlider.value = 1.0;
+      speedValueText.textContent = '100%';
+      speedBadge.textContent = '1.00x';
+      updateAudioParams();
+    });
+
+    document.querySelectorAll('.snap-speed-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const val = parseFloat(btn.dataset.speed);
+        appState.speed = val;
+        speedSlider.value = val;
+        speedValueText.textContent = `${Math.round(val * 100)}%`;
+        speedBadge.textContent = `${val.toFixed(2)}x`;
+        updateAudioParams();
+      });
+    });
+
+    // Pitch Slider
+    pitchSlider.addEventListener('input', (e) => {
+      appState.pitchSemi = parseInt(e.target.value);
+      pitchValueText.textContent = `${appState.pitchSemi > 0 ? '+' : ''}${appState.pitchSemi} semitones`;
+      updateAudioParams();
+    });
+
+    btnSnapPitchZero.addEventListener('click', () => {
+      appState.pitchSemi = 0;
+      pitchSlider.value = 0;
+      pitchValueText.textContent = '0 semitones';
+      updateAudioParams();
+    });
+
+    // Reverb Controls
+    reverbSpaceSelect.addEventListener('change', (e) => {
+      appState.reverbSpace = e.target.value;
+      reverbSpaceBadge.textContent = appState.reverbSpace.charAt(0).toUpperCase() + appState.reverbSpace.slice(1);
+      refreshReverbBuffer();
+    });
+
+    reverbMixSlider.addEventListener('input', (e) => {
+      appState.reverbMix = parseInt(e.target.value);
+      reverbMixValueText.textContent = `${appState.reverbMix}%`;
+      updateAudioParams();
+    });
+
+    reverbDecaySlider.addEventListener('input', (e) => {
+      appState.reverbDecay = parseFloat(e.target.value);
+      reverbDecayValueText.textContent = `${appState.reverbDecay.toFixed(1)}s`;
+      refreshReverbBuffer();
+    });
+
+    // Bass & High Cut Controls
+    bassBoostSlider.addEventListener('input', (e) => {
+      appState.bassBoost = parseFloat(e.target.value);
+      bassBoostValueText.textContent = `+${appState.bassBoost} dB`;
+      updateAudioParams();
+    });
+
+    highCutSlider.addEventListener('input', (e) => {
+      appState.highCut = parseInt(e.target.value);
+      highCutValueText.textContent = `${(appState.highCut / 1000).toFixed(1)} kHz`;
+      updateAudioParams();
+    });
+
+    // Noise Controls
+    btnToggleNoise.addEventListener('click', () => {
+      appState.noiseEnabled = !appState.noiseEnabled;
+      noiseToggleText.textContent = appState.noiseEnabled ? 'Active' : 'Disabled';
+      if (appState.noiseEnabled) {
+        noiseVolumeContainer.classList.remove('hidden');
+        btnToggleNoise.classList.add('bg-[#af52de]', 'text-white');
+      } else {
+        noiseVolumeContainer.classList.add('hidden');
+        btnToggleNoise.classList.remove('bg-[#af52de]', 'text-white');
+      }
+      updateAudioParams();
+    });
+
+    noiseVolumeSlider.addEventListener('input', (e) => {
+      appState.noiseVolume = parseFloat(e.target.value);
+      noiseVolumeText.textContent = `${Math.round((appState.noiseVolume / 0.4) * 100)}%`;
+      updateAudioParams();
+    });
+
+    // Preset Buttons
+    document.querySelectorAll('.preset-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const presetKey = btn.dataset.preset;
+        applyPreset(presetKey);
+      });
+    });
+
+    btnResetAll.addEventListener('click', () => {
+      applyPreset('original');
+    });
+
+    // Export WAV
+    btnExportWav.addEventListener('click', exportRemixedAudio);
+
+    // GitHub Guide Modal
+    btnGithubGuide.addEventListener('click', () => {
+      githubModal.classList.remove('hidden');
+    });
+
+    btnCloseModal.addEventListener('click', () => {
+      githubModal.classList.add('hidden');
+    });
+
+    githubModal.addEventListener('click', (e) => {
+      if (e.target === githubModal) {
+        githubModal.classList.add('hidden');
+      }
+    });
+
+    btnDownloadZip.addEventListener('click', exportGitHubRepoZip);
+    btnModalDownloadZip.addEventListener('click', exportGitHubRepoZip);
+    btnModalDownloadHtml.addEventListener('click', downloadStandaloneHtml);
+
+  </script>
+</body>
+</html>
