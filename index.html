@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Resonance — Apple-Inspired Slowed & Reverb Studio</title>
+  <title>Resonance — Slowed & Reverb Studio</title>
   <!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com/3.4.17"></script>
   <!-- JSZip for exporting complete repo -->
@@ -172,19 +172,7 @@
         <span>Demo Track</span>
       </button>
 
-      <button id="btnGithubGuide" type="button" class="px-3.5 py-1.5 rounded-full bg-[#1c1c1e] hover:bg-[#2c2c2e] text-xs font-medium text-[#f5f5f7] border border-white/10 transition-colors flex items-center gap-1.5 shadow-sm">
-        <svg class="w-3.5 h-3.5 text-[#86868b]" viewBox="0 0 24 24" fill="currentColor">
-          <path d="M12 0C5.37 0 0 5.37 0 12c0 5.31 3.435 9.795 8.205 11.385.6.105.825-.255.825-.57 0-.285-.015-1.23-.015-2.235-3.015.555-3.795-.735-4.035-1.41-.135-.345-.72-1.41-1.23-1.695-.42-.225-1.02-.78-.015-.795.945-.015 1.62.87 1.845 1.23 1.08 1.815 2.805 1.305 3.495.99.105-.78.42-1.305.765-1.605-2.67-.3-5.46-1.335-5.46-5.925 0-1.305.465-2.385 1.23-3.225-.12-.3-.54-1.53.12-3.18 0 0 1.005-.315 3.3 1.23.96-.27 1.98-.405 3-.405s2.04.135 3 .405c2.295-1.56 3.3-1.23 3.3-1.23.66 1.65.24 2.88.12 3.18.765.84 1.23 1.905 1.23 3.225 0 4.605-2.805 5.625-5.475 5.925.435.375.81 1.095.81 2.22 0 1.605-.015 2.895-.015 3.3 0 .315.225.69.825.57A12.02 12.02 0 0024 12c0-6.63-5.37-12-12-12z"/>
-        </svg>
-        <span class="hidden sm:inline">Host on GitHub</span>
-      </button>
 
-      <button id="btnDownloadZip" type="button" class="px-4 py-1.5 rounded-full bg-[#0071e3] hover:bg-[#0077ed] text-xs font-medium text-white transition-colors flex items-center gap-1.5 shadow-sm">
-        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2">
-          <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/>
-        </svg>
-        <span>Export Repo</span>
-      </button>
     </div>
   </header>
 
@@ -807,8 +795,6 @@
     const noiseVolumeText = document.getElementById('noiseVolumeText');
 
     const btnResetAll = document.getElementById('btnResetAll');
-    const btnGithubGuide = document.getElementById('btnGithubGuide');
-    const btnDownloadZip = document.getElementById('btnDownloadZip');
     const githubModal = document.getElementById('githubModal');
     const btnCloseModal = document.getElementById('btnCloseModal');
     const btnModalDownloadHtml = document.getElementById('btnModalDownloadHtml');
@@ -1688,9 +1674,9 @@
         const htmlContent = document.documentElement.outerHTML;
         zip.file("index.html", "<!DOCTYPE html>\n" + htmlContent);
 
-        const readmeContent = `# Resonance — Apple-Inspired Slowed & Reverb Studio
+        const readmeContent = `# Resonance — Slowed & Reverb Studio
 
-An ultra-sleek, client-side Slowed + Reverb, Nightcore, and Daycore audio processor and remixer. Built with modern Web Audio API, Apple-inspired aesthetics, and zero backend dependencies.
+An ultra-sleek, client-side Slowed + Reverb, Nightcore, and Daycore audio processor and remixer. Built with modern Web Audio API, sleek dark aesthetics, and zero backend dependencies.
 
 ## 🚀 Live Demo & Free Hosting on GitHub Pages
 
@@ -2020,10 +2006,6 @@ This entire project runs 100% in the browser with **zero backend server costs**!
     // Export WAV
     btnExportWav.addEventListener('click', exportRemixedAudio);
 
-    // GitHub Guide Modal
-    btnGithubGuide.addEventListener('click', () => {
-      githubModal.classList.remove('hidden');
-    });
 
     btnCloseModal.addEventListener('click', () => {
       githubModal.classList.add('hidden');
@@ -2035,7 +2017,6 @@ This entire project runs 100% in the browser with **zero backend server costs**!
       }
     });
 
-    btnDownloadZip.addEventListener('click', exportGitHubRepoZip);
     btnModalDownloadZip.addEventListener('click', exportGitHubRepoZip);
     btnModalDownloadHtml.addEventListener('click', downloadStandaloneHtml);
 
