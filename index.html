@@ -127,6 +127,17 @@
       box-shadow: 0 2px 8px rgba(0, 0, 0, 0.5);
     }
 
+    /* Vertical Graphic Equalizer Faders (MIUI-style tactile vertical sliders) */
+    input[type=range].eq-vslider {
+      width: 124px;
+      height: 5px;
+      transform: rotate(-90deg);
+      transform-origin: center;
+      flex-shrink: 0;
+      touch-action: none;
+      cursor: pointer;
+    }
+
     /* Apple subtle gradient texts */
     .apple-headline-gradient {
       background: linear-gradient(180deg, #ffffff 0%, #a1a1a6 100%);
@@ -500,27 +511,27 @@
           <span class="text-xs px-2.5 py-0.5 rounded-full bg-[#242426] text-[#af52de] font-mono border border-white/5">808 Dynamics</span>
         </div>
 
-        <!-- Bass Boost (Low Shelf 120Hz) -->
+        <!-- Focused 58Hz Kick & Sub-Bass Punch (No Muddy Low-Mid Bleed) -->
         <div class="space-y-2">
           <div class="flex items-center justify-between text-xs text-[#f5f5f7]">
-            <span>Sub-Bass Boost</span>
-            <span id="bassBoostValueText" class="font-mono text-[#af52de] font-medium tabular-nums">+6 dB</span>
+            <span>Kick &amp; 808 Thump (58Hz)</span>
+            <span id="bassBoostValueText" class="font-mono text-[#af52de] font-medium tabular-nums">+4 dB</span>
           </div>
-          <input type="range" id="bassBoostSlider" min="0" max="15" step="0.5" value="6" class="w-full">
+          <input type="range" id="bassBoostSlider" min="0" max="15" step="0.5" value="4" class="w-full">
           <div class="flex justify-between text-[11px] text-[#6e6e73]">
             <span>Flat (0 dB)</span>
-            <span>+6 dB Warm</span>
-            <span>+15 dB Heavy</span>
+            <span>+6 dB Punchy</span>
+            <span>+15 dB Hard</span>
           </div>
         </div>
 
-        <!-- High-Cut Warmth (Lowpass Filter) -->
+        <!-- High-Cut Warmth (Lowpass Filter — defaults to 20kHz Crisp so vocals/hats stay clear) -->
         <div class="space-y-2">
           <div class="flex items-center justify-between text-xs text-[#f5f5f7]">
             <span>High-Cut Damping</span>
-            <span id="highCutValueText" class="font-mono text-[#af52de] font-medium tabular-nums">14.0 kHz</span>
+            <span id="highCutValueText" class="font-mono text-[#af52de] font-medium tabular-nums">20.0 kHz</span>
           </div>
-          <input type="range" id="highCutSlider" min="1500" max="20000" step="250" value="14000" class="w-full">
+          <input type="range" id="highCutSlider" min="1500" max="20000" step="250" value="20000" class="w-full">
           <div class="flex justify-between text-[11px] text-[#6e6e73]">
             <span>1.5 kHz Muffled</span>
             <span>10 kHz Warm</span>
@@ -542,6 +553,126 @@
               <span id="noiseVolumeText" class="font-mono text-[#af52de] tabular-nums">15%</span>
             </div>
             <input type="range" id="noiseVolumeSlider" min="0" max="0.4" step="0.02" value="0.15" class="w-full">
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 7-Band Graphic Equalizer (MIUI-Style Tight Bell Filters: Hard-Hitting 63Hz Without Vocal Mud) -->
+    <div class="apple-card p-6 md:p-7 border border-white/[0.08] space-y-5">
+      <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-white/[0.06] pb-4">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-full bg-[#1c1c1e] text-[#2997ff] flex items-center justify-center border border-white/5 shrink-0">
+            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <path d="M4 21v-7"/><path d="M4 10V3"/><path d="M12 21v-9"/><path d="M12 8V3"/><path d="M20 21v-5"/><path d="M20 12V3"/>
+              <path d="M2 14h4"/><path d="M10 8h4"/><path d="M18 16h4"/>
+            </svg>
+          </div>
+          <div>
+            <h4 class="font-medium text-[#f5f5f7] text-sm">7-Band Graphic Equalizer</h4>
+            <p class="text-[11px] text-[#86868b]">Push 63Hz up for hard-hitting drums &amp; bass while keeping mids &amp; vocals crisp</p>
+          </div>
+        </div>
+
+        <!-- Quick EQ Curve Pills -->
+        <div class="flex flex-wrap items-center gap-1.5">
+          <button type="button" data-eq-curve="punchy" class="eq-curve-btn px-3 py-1 rounded-full bg-[#2997ff]/15 text-[#2997ff] border border-[#2997ff]/30 hover:bg-[#2997ff]/25 text-[11px] font-medium transition">Punchy Kick</button>
+          <button type="button" data-eq-curve="hard808" class="eq-curve-btn px-3 py-1 rounded-full bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[#f5f5f7] border border-white/10 text-[11px] font-medium transition">Hard Bass</button>
+          <button type="button" data-eq-curve="hiphop" class="eq-curve-btn px-3 py-1 rounded-full bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[#f5f5f7] border border-white/10 text-[11px] font-medium transition">Hip-Hop</button>
+          <button type="button" data-eq-curve="vshape" class="eq-curve-btn px-3 py-1 rounded-full bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[#f5f5f7] border border-white/10 text-[11px] font-medium transition">V-Shape</button>
+          <button type="button" data-eq-curve="vocal" class="eq-curve-btn px-3 py-1 rounded-full bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[#f5f5f7] border border-white/10 text-[11px] font-medium transition">Vocal Clear</button>
+          <button type="button" id="btnResetEq" data-eq-curve="flat" class="eq-curve-btn px-3 py-1 rounded-full bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[#86868b] hover:text-[#f5f5f7] border border-white/5 text-[11px] font-medium transition">Flat</button>
+        </div>
+      </div>
+
+      <!-- 7 Vertical Sliders Bank (63Hz, 160Hz, 400Hz, 1kHz, 2.5kHz, 6.3kHz, 16kHz) -->
+      <div class="relative pt-1 pb-1">
+        <!-- Subtle 0dB center reference line -->
+        <div class="pointer-events-none absolute left-2 right-2 top-1/2 -translate-y-1 border-t border-dashed border-white/[0.07] z-0"></div>
+
+        <div class="relative z-10 grid grid-cols-7 gap-1 sm:gap-3 text-center">
+          <!-- Band 0: 63Hz (Kick & Sub Thump) -->
+          <div class="flex flex-col items-center space-y-2">
+            <span id="eqVal0" class="text-[11px] font-mono tabular-nums text-[#2997ff] font-semibold">+6.5</span>
+            <div class="h-36 w-full flex items-center justify-center">
+              <input type="range" id="eqBand0" data-band="0" min="-12" max="12" step="0.5" value="6.5" class="eq-vslider">
+            </div>
+            <div>
+              <div class="text-[11px] font-semibold text-[#f5f5f7]">63Hz</div>
+              <div class="text-[9px] text-[#2997ff] hidden sm:block">Kick/Sub</div>
+            </div>
+          </div>
+
+          <!-- Band 1: 160Hz (Upper Bass Punch) -->
+          <div class="flex flex-col items-center space-y-2">
+            <span id="eqVal1" class="text-[11px] font-mono tabular-nums text-[#2997ff] font-medium">+1.5</span>
+            <div class="h-36 w-full flex items-center justify-center">
+              <input type="range" id="eqBand1" data-band="1" min="-12" max="12" step="0.5" value="1.5" class="eq-vslider">
+            </div>
+            <div>
+              <div class="text-[11px] font-medium text-[#f5f5f7]">160Hz</div>
+              <div class="text-[9px] text-[#6e6e73] hidden sm:block">Punch</div>
+            </div>
+          </div>
+
+          <!-- Band 2: 400Hz (Mud / Boxiness Control) -->
+          <div class="flex flex-col items-center space-y-2">
+            <span id="eqVal2" class="text-[11px] font-mono tabular-nums text-[#86868b] font-medium">-1.5</span>
+            <div class="h-36 w-full flex items-center justify-center">
+              <input type="range" id="eqBand2" data-band="2" min="-12" max="12" step="0.5" value="-1.5" class="eq-vslider">
+            </div>
+            <div>
+              <div class="text-[11px] font-medium text-[#f5f5f7]">400Hz</div>
+              <div class="text-[9px] text-[#6e6e73] hidden sm:block">Low-Mid</div>
+            </div>
+          </div>
+
+          <!-- Band 3: 1kHz (Center Vocals) -->
+          <div class="flex flex-col items-center space-y-2">
+            <span id="eqVal3" class="text-[11px] font-mono tabular-nums text-[#86868b] font-medium">0.0</span>
+            <div class="h-36 w-full flex items-center justify-center">
+              <input type="range" id="eqBand3" data-band="3" min="-12" max="12" step="0.5" value="0" class="eq-vslider">
+            </div>
+            <div>
+              <div class="text-[11px] font-medium text-[#f5f5f7]">1kHz</div>
+              <div class="text-[9px] text-[#6e6e73] hidden sm:block">Vocals</div>
+            </div>
+          </div>
+
+          <!-- Band 4: 2.5kHz (Snare Attack & Presence) -->
+          <div class="flex flex-col items-center space-y-2">
+            <span id="eqVal4" class="text-[11px] font-mono tabular-nums text-[#2997ff] font-medium">+1.0</span>
+            <div class="h-36 w-full flex items-center justify-center">
+              <input type="range" id="eqBand4" data-band="4" min="-12" max="12" step="0.5" value="1.0" class="eq-vslider">
+            </div>
+            <div>
+              <div class="text-[11px] font-medium text-[#f5f5f7]">2.5kHz</div>
+              <div class="text-[9px] text-[#6e6e73] hidden sm:block">Snap</div>
+            </div>
+          </div>
+
+          <!-- Band 5: 6.3kHz (Crisp Hi-Hats) -->
+          <div class="flex flex-col items-center space-y-2">
+            <span id="eqVal5" class="text-[11px] font-mono tabular-nums text-[#2997ff] font-medium">+2.0</span>
+            <div class="h-36 w-full flex items-center justify-center">
+              <input type="range" id="eqBand5" data-band="5" min="-12" max="12" step="0.5" value="2.0" class="eq-vslider">
+            </div>
+            <div>
+              <div class="text-[11px] font-medium text-[#f5f5f7]">6.3kHz</div>
+              <div class="text-[9px] text-[#6e6e73] hidden sm:block">Crisp</div>
+            </div>
+          </div>
+
+          <!-- Band 6: 16kHz (Studio Air) -->
+          <div class="flex flex-col items-center space-y-2">
+            <span id="eqVal6" class="text-[11px] font-mono tabular-nums text-[#2997ff] font-medium">+2.5</span>
+            <div class="h-36 w-full flex items-center justify-center">
+              <input type="range" id="eqBand6" data-band="6" min="-12" max="12" step="0.5" value="2.5" class="eq-vslider">
+            </div>
+            <div>
+              <div class="text-[11px] font-medium text-[#f5f5f7]">16kHz</div>
+              <div class="text-[9px] text-[#6e6e73] hidden sm:block">Air</div>
+            </div>
           </div>
         </div>
       </div>
@@ -680,14 +811,36 @@
 
   <!-- Audio Application Script -->
   <script>
+    const isMobileDevice = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.matchMedia('(max-width: 768px)').matches;
+
     // Acoustic space profiles for Natural Lush Convolution Reverb
-    // Carefully damped and shaped for warm, dreamy Slowed + Reverb atmosphere (zero metallic ringing)
     const REVERB_SPACES = {
       cathedral:  { decayExp: 2.2, preDelay: 0.028, dampRoll: 0.52, lpAlpha: 0.42, targetRms: 0.19 },
       hall:       { decayExp: 2.7, preDelay: 0.020, dampRoll: 0.44, lpAlpha: 0.48, targetRms: 0.18 },
       ethereal:   { decayExp: 1.75, preDelay: 0.038, dampRoll: 0.35, lpAlpha: 0.52, targetRms: 0.21 },
       room:       { decayExp: 3.8, preDelay: 0.008, dampRoll: 0.60, lpAlpha: 0.40, targetRms: 0.16 },
       underwater: { decayExp: 2.4, preDelay: 0.025, dampRoll: 0.82, lpAlpha: 0.22, targetRms: 0.18 },
+    };
+
+    // MIUI-Style 7-Band Graphic Equalizer Definitions
+    // Tight peaking bell filters let 63Hz slam hard on drums/bass without bleeding mud into 250-500Hz vocals!
+    const EQ_BAND_SPECS = [
+      { freq: 63,    type: 'peaking',   q: 1.35 }, // Band 0: Kick Drum & Sub Thump
+      { freq: 160,   type: 'peaking',   q: 1.45 }, // Band 1: Upper Bass Punch
+      { freq: 400,   type: 'peaking',   q: 1.55 }, // Band 2: Low-Mid / Boxiness Control
+      { freq: 1000,  type: 'peaking',   q: 1.45 }, // Band 3: Center Vocals
+      { freq: 2500,  type: 'peaking',   q: 1.45 }, // Band 4: Snare Snap & Presence
+      { freq: 6300,  type: 'peaking',   q: 1.45 }, // Band 5: Hi-Hat Crispness
+      { freq: 12500, type: 'highshelf', q: 0.70 }, // Band 6: 16kHz Studio Air & Sparkle
+    ];
+
+    const EQ_CURVES = {
+      punchy:  [6.5,  1.5, -1.5,  0.0,  1.0,  2.0,  2.5],
+      hard808: [10.5, 3.0, -2.5,  0.0,  1.5,  2.5,  3.5],
+      hiphop:  [8.0,  2.0, -2.0, -0.5,  1.5,  2.5,  3.5],
+      vshape:  [7.0,  2.5, -2.0, -1.0,  2.0,  3.5,  4.5],
+      vocal:   [0.0, -1.0, -2.0,  2.5,  3.5,  3.0,  2.0],
+      flat:    [0.0,  0.0,  0.0,  0.0,  0.0,  0.0,  0.0],
     };
 
     // State management
@@ -711,7 +864,10 @@
       // Audio Nodes
       headroomNode: null,
       bassFilter: null,
+      antiMudFilter: null,
+      eqFilterNodes: [],
       highCutFilter: null,
+      reverbLowCutNode: null,
       convolverNode: null,
       convolverConnected: false,
       wetGainNode: null,
@@ -727,10 +883,11 @@
       speed: 0.85,
       pitchSemi: 0,
       reverbSpace: 'cathedral',
-      reverbMix: 40, // percent (gentle musical balance)
+      reverbMix: 40, // percent
       reverbDecay: 3.8, // seconds
-      bassBoost: 6.0, // dB
-      highCut: 14000, // Hz
+      bassBoost: 4.0, // dB focused 58Hz punch
+      eqGains: [6.5, 1.5, -1.5, 0.0, 1.0, 2.0, 2.5], // 7-band MIUI punch curve
+      highCut: 20000, // Hz (20kHz open & crisp by default!)
       volume: 0.85,
       noiseEnabled: false,
       noiseVolume: 0.15,
@@ -794,6 +951,10 @@
     const bassBoostValueText = document.getElementById('bassBoostValueText');
     const highCutSlider = document.getElementById('highCutSlider');
     const highCutValueText = document.getElementById('highCutValueText');
+
+    const eqSliders = [0, 1, 2, 3, 4, 5, 6].map(i => document.getElementById(`eqBand${i}`));
+    const eqValLabels = [0, 1, 2, 3, 4, 5, 6].map(i => document.getElementById(`eqVal${i}`));
+    const btnResetEq = document.getElementById('btnResetEq');
 
     const btnToggleNoise = document.getElementById('btnToggleNoise');
     const noiseToggleText = document.getElementById('noiseToggleText');
@@ -863,15 +1024,42 @@
       }
     });
 
-    // Natural, Warm Impulse Response Generator
-    // Energy-normalized, smoothly filtered, and cosine-tapered so the reverb floats softly behind the music
-    function generateNaturalImpulse(ctx, spaceKey, decaySeconds) {
+    // Sync 7-Band EQ UI Sliders & dB Badges
+    function syncEqUI(activeCurveName = null) {
+      for (let i = 0; i < 7; i++) {
+        const val = appState.eqGains[i];
+        if (eqSliders[i]) eqSliders[i].value = val;
+        if (eqValLabels[i]) {
+          const sign = val > 0 ? '+' : '';
+          eqValLabels[i].textContent = `${sign}${val.toFixed(1)}`;
+          if (val > 0.1) {
+            eqValLabels[i].className = 'text-[11px] font-mono tabular-nums text-[#2997ff] font-semibold';
+          } else if (val < -0.1) {
+            eqValLabels[i].className = 'text-[11px] font-mono tabular-nums text-[#af52de] font-medium';
+          } else {
+            eqValLabels[i].className = 'text-[11px] font-mono tabular-nums text-[#86868b] font-medium';
+          }
+        }
+      }
+
+      document.querySelectorAll('.eq-curve-btn').forEach(btn => {
+        if (activeCurveName && btn.dataset.eqCurve === activeCurveName) {
+          btn.className = 'eq-curve-btn px-3 py-1 rounded-full bg-[#2997ff]/15 text-[#2997ff] border border-[#2997ff]/30 text-[11px] font-medium transition';
+        } else {
+          btn.className = 'eq-curve-btn px-3 py-1 rounded-full bg-[#1c1c1e] hover:bg-[#2c2c2e] text-[#f5f5f7] border border-white/10 text-[11px] font-medium transition';
+        }
+      });
+    }
+
+    // Natural, Warm Impulse Response Generator (mobile-capped for lag-free playback, full length on WAV export)
+    function generateNaturalImpulse(ctx, spaceKey, decaySeconds, forExport = false) {
       const cfg = REVERB_SPACES[spaceKey] || REVERB_SPACES.cathedral;
       const sampleRate = ctx.sampleRate;
-      const safeDuration = Math.max(0.6, Math.min(5.5, decaySeconds));
-      const cacheKey = `${sampleRate}_${spaceKey}_${safeDuration.toFixed(1)}`;
+      const maxDur = (!forExport && isMobileDevice) ? 2.5 : 5.5;
+      const safeDuration = Math.max(0.6, Math.min(maxDur, decaySeconds));
+      const cacheKey = `${sampleRate}_${spaceKey}_${safeDuration.toFixed(1)}_${forExport ? 'hq' : 'rt'}`;
 
-      if (appState.impulseCache[cacheKey]) {
+      if (!forExport && appState.impulseCache[cacheKey]) {
         return appState.impulseCache[cacheKey];
       }
 
@@ -883,7 +1071,7 @@
       const left = buffer.getChannelData(0);
       const right = buffer.getChannelData(1);
 
-      const fadeInLen = Math.min(bodyLen, Math.floor(sampleRate * 0.018)); // 18ms soft onset (zero click/transient harshness)
+      const fadeInLen = Math.min(bodyLen, Math.floor(sampleRate * 0.018));
       let sumSqL = 0;
       let sumSqR = 0;
 
@@ -901,11 +1089,9 @@
         const damp = (1.0 - t * cfg.dampRoll);
         const gain = env * damp;
 
-        // Decorrelated stereo diffuse noise
         const rawL = ((Math.random() * 2) - 1) * gain;
         const rawR = ((Math.random() * 2) - 1) * gain;
 
-        // Warm 1-pole lowpass filter removes digital white-noise fizz
         lastL = lastL + alpha * (rawL - lastL);
         lastR = lastR + alpha * (rawR - lastR);
 
@@ -916,7 +1102,6 @@
         sumSqR += lastR * lastR;
       }
 
-      // Energy Normalization: ensures the reverb sits in the mix with a predictable, musical loudness
       const rmsL = Math.sqrt(sumSqL / bodyLen) || 1e-4;
       const rmsR = Math.sqrt(sumSqR / bodyLen) || 1e-4;
       const scaleL = cfg.targetRms / rmsL;
@@ -927,12 +1112,13 @@
         right[preDelaySamples + i] *= scaleR;
       }
 
-      // Keep cache small
-      const keys = Object.keys(appState.impulseCache);
-      if (keys.length > 12) {
-        delete appState.impulseCache[keys[0]];
+      if (!forExport) {
+        const keys = Object.keys(appState.impulseCache);
+        if (keys.length > 12) {
+          delete appState.impulseCache[keys[0]];
+        }
+        appState.impulseCache[cacheKey] = buffer;
       }
-      appState.impulseCache[cacheKey] = buffer;
       return buffer;
     }
 
@@ -986,14 +1172,14 @@
     }
 
     function syncReverbConnection() {
-      if (!appState.highCutFilter || !appState.convolverNode) return;
+      if (!appState.highCutFilter || !appState.reverbLowCutNode) return;
       const shouldConnect = !appState.isBypassed && appState.reverbMix > 0;
       if (shouldConnect && !appState.convolverConnected) {
-        appState.highCutFilter.connect(appState.convolverNode);
+        appState.highCutFilter.connect(appState.reverbLowCutNode);
         appState.convolverConnected = true;
       } else if (!shouldConnect && appState.convolverConnected) {
         try {
-          appState.highCutFilter.disconnect(appState.convolverNode);
+          appState.highCutFilter.disconnect(appState.reverbLowCutNode);
         } catch (e) {}
         appState.convolverConnected = false;
       }
@@ -1010,52 +1196,80 @@
         appState.convolverNode.buffer = generateNaturalImpulse(
           appState.audioCtx,
           appState.reverbSpace,
-          appState.reverbDecay
+          appState.reverbDecay,
+          false
         );
       };
       if (immediate) {
         applyBuffer();
       } else {
-        appState.reverbDebounceTimer = setTimeout(applyBuffer, 90);
+        appState.reverbDebounceTimer = setTimeout(applyBuffer, 110);
       }
     }
 
-    // Calculate clean pre-EQ headroom so +6dB to +15dB bass boosts never hard-clip mobile DACs
-    function computeHeadroomGain() {
-      if (appState.isBypassed || appState.bassBoost <= 0) return 0.95;
-      const trimDb = -(appState.bassBoost * 0.35);
-      return 0.95 * Math.pow(10, trimDb / 20);
+    // Calculate subtle anti-mud cut at 250Hz so heavy 58Hz/63Hz kick boosts stay razor-clean
+    function computeAntiMudCut() {
+      if (appState.isBypassed) return 0;
+      const subEnergy = Math.max(0, appState.bassBoost) + Math.max(0, appState.eqGains[0] * 0.5);
+      return -Math.min(3.5, subEnergy * 0.18);
     }
 
     // Build the Web Audio Graph
     function setupAudioGraph() {
       const ctx = getOrCreateAudioContext();
 
+      // Steady input gain (never ducks mids/vocals when bass increases!)
       appState.headroomNode = ctx.createGain();
-      appState.headroomNode.gain.value = computeHeadroomGain();
+      appState.headroomNode.gain.value = 0.90;
 
-      // Bass Boost Filter (LowShelf at 120Hz)
+      // Focused 58Hz Kick & 808 Thump Peaking Filter (replaces muddy 120Hz lowshelf!)
       appState.bassFilter = ctx.createBiquadFilter();
-      appState.bassFilter.type = 'lowshelf';
-      appState.bassFilter.frequency.value = 120;
+      appState.bassFilter.type = 'peaking';
+      appState.bassFilter.frequency.value = 58;
+      appState.bassFilter.Q.value = 1.25;
       appState.bassFilter.gain.value = appState.isBypassed ? 0 : appState.bassBoost;
 
-      // High Cut Filter (Butterworth Lowpass)
+      // Subtle 250Hz Anti-Mud Carve so bass hits hard without muffling vocals
+      appState.antiMudFilter = ctx.createBiquadFilter();
+      appState.antiMudFilter.type = 'peaking';
+      appState.antiMudFilter.frequency.value = 250;
+      appState.antiMudFilter.Q.value = 1.75;
+      appState.antiMudFilter.gain.value = computeAntiMudCut();
+
+      // 7-Band MIUI Graphic Equalizer Chain
+      appState.eqFilterNodes = EQ_BAND_SPECS.map((spec, idx) => {
+        const f = ctx.createBiquadFilter();
+        f.type = spec.type;
+        f.frequency.value = spec.freq;
+        if (spec.type === 'peaking') {
+          f.Q.value = spec.q;
+        }
+        f.gain.value = appState.isBypassed ? 0 : appState.eqGains[idx];
+        return f;
+      });
+
+      // High Cut Filter (20kHz Crisp default; only rolls off highs when user lowers slider)
       appState.highCutFilter = ctx.createBiquadFilter();
       appState.highCutFilter.type = 'lowpass';
       appState.highCutFilter.frequency.value = appState.isBypassed ? 20000 : appState.highCut;
       appState.highCutFilter.Q.value = -3.0103;
 
+      // Abbey Road 180Hz Reverb High-Pass Filter: keeps booming sub-bass out of the reverb tail so kicks hit tight!
+      appState.reverbLowCutNode = ctx.createBiquadFilter();
+      appState.reverbLowCutNode.type = 'highpass';
+      appState.reverbLowCutNode.frequency.value = 180;
+      appState.reverbLowCutNode.Q.value = -3.0103;
+
       // Natural Lush Convolver Node
       appState.convolverNode = ctx.createConvolver();
-      appState.convolverNode.buffer = generateNaturalImpulse(ctx, appState.reverbSpace, appState.reverbDecay);
+      appState.convolverNode.buffer = generateNaturalImpulse(ctx, appState.reverbSpace, appState.reverbDecay, false);
 
       appState.wetGainNode = ctx.createGain();
       appState.dryGainNode = ctx.createGain();
 
       const mixNorm = appState.reverbMix / 100;
       const wet = appState.isBypassed ? 0 : (mixNorm * 0.48);
-      const dry = appState.isBypassed ? 1.0 : (1.0 - mixNorm * 0.18);
+      const dry = appState.isBypassed ? 1.0 : (1.0 - mixNorm * 0.16);
       appState.wetGainNode.gain.value = wet;
       appState.dryGainNode.gain.value = dry;
 
@@ -1063,28 +1277,36 @@
       appState.gainNode = ctx.createGain();
       appState.gainNode.gain.value = appState.volume;
 
-      // Transparent Studio Limiter to prevent harsh digital speaker clipping on heavy 808s
+      // Ultra-Fast Non-Pumping Peak Catcher (catches > -0.6dB sub peaks in 25ms without ducking vocals!)
       appState.limiterNode = ctx.createDynamicsCompressor();
-      appState.limiterNode.threshold.value = -1.5;
-      appState.limiterNode.knee.value = 6.0;
-      appState.limiterNode.ratio.value = 10.0;
-      appState.limiterNode.attack.value = 0.003;
-      appState.limiterNode.release.value = 0.12;
+      appState.limiterNode.threshold.value = -0.6;
+      appState.limiterNode.knee.value = 3.0;
+      appState.limiterNode.ratio.value = 18.0;
+      appState.limiterNode.attack.value = 0.001;
+      appState.limiterNode.release.value = 0.025;
 
-      // Signal Routing
+      // Chain: Headroom -> 58Hz Kick -> 250Hz Anti-Mud -> 7-Band EQ -> HighCut
       appState.headroomNode.connect(appState.bassFilter);
-      appState.bassFilter.connect(appState.highCutFilter);
+      appState.bassFilter.connect(appState.antiMudFilter);
+
+      let prevNode = appState.antiMudFilter;
+      for (let i = 0; i < appState.eqFilterNodes.length; i++) {
+        prevNode.connect(appState.eqFilterNodes[i]);
+        prevNode = appState.eqFilterNodes[i];
+      }
+      prevNode.connect(appState.highCutFilter);
 
       // Dry path
       appState.highCutFilter.connect(appState.dryGainNode);
       appState.dryGainNode.connect(appState.gainNode);
 
-      // Wet path
+      // Wet path (180Hz mud-cut -> Convolver -> WetGain)
+      appState.reverbLowCutNode.connect(appState.convolverNode);
       appState.convolverNode.connect(appState.wetGainNode);
       appState.wetGainNode.connect(appState.gainNode);
       syncReverbConnection();
 
-      // Master -> Limiter -> Speakers
+      // Master -> Fast Peak Catcher -> Speakers
       appState.gainNode.connect(appState.limiterNode);
       appState.limiterNode.connect(ctx.destination);
 
@@ -1149,7 +1371,7 @@
     function updateAudioParams() {
       if (!appState.audioCtx) return;
       const now = appState.audioCtx.currentTime;
-      const smoothTau = 0.02;
+      const smoothTau = 0.018;
 
       if (appState.sourceNode) {
         const targetRate = appState.isBypassed ? 1.0 : appState.speed;
@@ -1163,13 +1385,18 @@
         }
       }
 
-      if (appState.headroomNode) {
-        appState.headroomNode.gain.setTargetAtTime(computeHeadroomGain(), now, smoothTau);
-      }
-
       if (appState.bassFilter) {
         const targetBass = appState.isBypassed ? 0 : appState.bassBoost;
         appState.bassFilter.gain.setTargetAtTime(targetBass, now, smoothTau);
+      }
+
+      if (appState.antiMudFilter) {
+        appState.antiMudFilter.gain.setTargetAtTime(computeAntiMudCut(), now, smoothTau);
+      }
+
+      for (let i = 0; i < appState.eqFilterNodes.length; i++) {
+        const targetEq = appState.isBypassed ? 0 : appState.eqGains[i];
+        appState.eqFilterNodes[i].gain.setTargetAtTime(targetEq, now, smoothTau);
       }
 
       if (appState.highCutFilter) {
@@ -1182,7 +1409,7 @@
       if (appState.wetGainNode && appState.dryGainNode) {
         const mixNorm = appState.reverbMix / 100;
         const wet = appState.isBypassed ? 0 : (mixNorm * 0.48);
-        const dry = appState.isBypassed ? 1.0 : (1.0 - mixNorm * 0.18);
+        const dry = appState.isBypassed ? 1.0 : (1.0 - mixNorm * 0.16);
         appState.wetGainNode.gain.setTargetAtTime(wet, now, smoothTau);
         appState.dryGainNode.gain.setTargetAtTime(dry, now, smoothTau);
       }
@@ -1343,7 +1570,7 @@
       reader.readAsArrayBuffer(file);
     }
 
-    // Synthesize a Chill Lo-Fi / Synthwave Demo Track in Browser
+    // Synthesize a Punchy Demo Track in Browser (with crisp 63Hz kick & snare so EQ punch is immediately audible!)
     function generateDemoTrack() {
       const ctx = getOrCreateAudioContext();
       showToast('Generating studio demo track...', 'info');
@@ -1370,7 +1597,7 @@
 
           const gain = offlineCtx.createGain();
           gain.gain.setValueAtTime(0, startTime);
-          gain.gain.linearRampToValueAtTime(0.08, startTime + 0.1);
+          gain.gain.linearRampToValueAtTime(0.07, startTime + 0.08);
           gain.gain.exponentialRampToValueAtTime(0.001, startTime + 3.8);
 
           osc.connect(gain);
@@ -1382,12 +1609,12 @@
 
         const bassOsc = offlineCtx.createOscillator();
         bassOsc.type = 'sine';
-        const bassFreq = chord[0] / 2;
+        const bassFreq = chord[0] / 4; // Deep 55-73Hz 808 sub
         bassOsc.frequency.setValueAtTime(bassFreq, startTime);
 
         const bassGain = offlineCtx.createGain();
         bassGain.gain.setValueAtTime(0, startTime);
-        bassGain.gain.linearRampToValueAtTime(0.18, startTime + 0.05);
+        bassGain.gain.linearRampToValueAtTime(0.22, startTime + 0.04);
         bassGain.gain.exponentialRampToValueAtTime(0.001, startTime + 3.6);
 
         bassOsc.connect(bassGain);
@@ -1400,26 +1627,30 @@
       for (let beat = 0; beat < 16; beat++) {
         const beatTime = beat * 1.0;
         if (beat % 2 === 0) {
+          // Punchy 63Hz Kick Drum
           const kick = offlineCtx.createOscillator();
-          kick.frequency.setValueAtTime(140, beatTime);
-          kick.frequency.exponentialRampToValueAtTime(40, beatTime + 0.2);
+          kick.frequency.setValueAtTime(155, beatTime);
+          kick.frequency.exponentialRampToValueAtTime(52, beatTime + 0.09);
+          kick.frequency.exponentialRampToValueAtTime(38, beatTime + 0.28);
 
           const kickGain = offlineCtx.createGain();
-          kickGain.gain.setValueAtTime(0.25, beatTime);
-          kickGain.gain.exponentialRampToValueAtTime(0.001, beatTime + 0.25);
+          kickGain.gain.setValueAtTime(0.32, beatTime);
+          kickGain.gain.exponentialRampToValueAtTime(0.001, beatTime + 0.30);
 
           kick.connect(kickGain);
           kickGain.connect(offlineCtx.destination);
 
           kick.start(beatTime);
-          kick.stop(beatTime + 0.25);
+          kick.stop(beatTime + 0.31);
         } else {
+          // Crisp Snare
           const snare = offlineCtx.createOscillator();
           snare.type = 'triangle';
-          snare.frequency.setValueAtTime(200, beatTime);
+          snare.frequency.setValueAtTime(220, beatTime);
+          snare.frequency.exponentialRampToValueAtTime(130, beatTime + 0.12);
 
           const snareGain = offlineCtx.createGain();
-          snareGain.gain.setValueAtTime(0.12, beatTime);
+          snareGain.gain.setValueAtTime(0.14, beatTime);
           snareGain.gain.exponentialRampToValueAtTime(0.001, beatTime + 0.18);
 
           snare.connect(snareGain);
@@ -1453,17 +1684,18 @@
       });
     }
 
-    // Preset configurations
+    // Preset configurations (Crisp 20kHz top-end + punchy MIUI 63Hz EQ curve so slowed tracks hit hard without muffling!)
     const PRESETS = {
       'slowed-reverb': {
         name: 'Slowed + Reverb',
         speed: 0.85,
         pitchSemi: 0,
         space: 'cathedral',
-        decay: 4.5,
-        mix: 45,
-        bass: 7.0,
-        highCut: 13500,
+        decay: 3.8,
+        mix: 40,
+        bass: 4.0,
+        eq: [6.5, 1.5, -1.5, 0.0, 1.0, 2.0, 2.5],
+        highCut: 20000,
         noise: false,
       },
       'nightcore': {
@@ -1473,19 +1705,21 @@
         space: 'hall',
         decay: 2.2,
         mix: 20,
-        bass: 2.0,
-        highCut: 19500,
+        bass: 3.0,
+        eq: [5.0, 1.5, -1.0, 0.0, 1.0, 1.5, 2.0],
+        highCut: 20000,
         noise: false,
       },
       'daycore': {
-        name: 'Daycore / Deep',
+        name: 'Daycore / Heavy',
         speed: 0.76,
         pitchSemi: -4,
         space: 'cathedral',
-        decay: 5.5,
-        mix: 50,
-        bass: 9.0,
-        highCut: 11000,
+        decay: 4.4,
+        mix: 42,
+        bass: 6.0,
+        eq: [8.5, 2.0, -2.5, 0.0, 1.5, 2.5, 3.5],
+        highCut: 19500,
         noise: false,
       },
       'vaporwave': {
@@ -1494,9 +1728,10 @@
         pitchSemi: -1,
         space: 'ethereal',
         decay: 3.8,
-        mix: 40,
-        bass: 5.0,
-        highCut: 9500,
+        mix: 42,
+        bass: 4.0,
+        eq: [5.5, 2.0, -1.0, 0.0, 0.5, -1.0, -2.0],
+        highCut: 11500,
         noise: true,
         noiseVol: 0.18,
       },
@@ -1505,9 +1740,10 @@
         speed: 0.88,
         pitchSemi: -2,
         space: 'underwater',
-        decay: 4.8,
-        mix: 65,
-        bass: 10.0,
+        decay: 4.2,
+        mix: 55,
+        bass: 6.5,
+        eq: [7.0, 2.0, -2.0, -1.0, -2.0, -4.0, -6.0],
         highCut: 3500,
         noise: false,
       },
@@ -1516,10 +1752,11 @@
         speed: 0.90,
         pitchSemi: 0,
         space: 'cathedral',
-        decay: 7.0,
-        mix: 65,
-        bass: 4.0,
-        highCut: 16000,
+        decay: 5.2,
+        mix: 55,
+        bass: 3.0,
+        eq: [4.5, 1.0, -1.5, 0.0, 1.0, 2.0, 3.0],
+        highCut: 20000,
         noise: false,
       },
       'original': {
@@ -1530,6 +1767,7 @@
         decay: 1.0,
         mix: 0,
         bass: 0,
+        eq: [0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
         highCut: 20000,
         noise: false,
       }
@@ -1546,6 +1784,7 @@
       appState.reverbDecay = p.decay;
       appState.reverbMix = p.mix;
       appState.bassBoost = p.bass;
+      appState.eqGains = p.eq ? [...p.eq] : [0, 0, 0, 0, 0, 0, 0];
       appState.highCut = p.highCut;
       appState.noiseEnabled = p.noise || false;
       if (p.noiseVol) appState.noiseVolume = p.noiseVol;
@@ -1571,6 +1810,8 @@
       highCutSlider.value = appState.highCut;
       highCutValueText.textContent = `${(appState.highCut / 1000).toFixed(1)} kHz`;
 
+      syncEqUI(presetKey === 'original' ? 'flat' : (presetKey === 'slowed-reverb' ? 'punchy' : null));
+
       noiseToggleText.textContent = appState.noiseEnabled ? 'Active' : 'Disabled';
       if (appState.noiseEnabled) {
         noiseVolumeContainer.classList.remove('hidden');
@@ -1580,6 +1821,7 @@
         btnToggleNoise.classList.remove('bg-[#af52de]', 'text-white');
       }
 
+      refreshReverbBuffer(true);
       updateAudioParams();
       showToast(`Preset "${p.name}" applied`, 'info');
     }
@@ -1641,7 +1883,7 @@
       return new Blob([view], { type: 'audio/wav' });
     }
 
-    // Offline Export to WAV using the exact same Studio Algorithmic Stereo Reverb + Limiter
+    // Offline Export to WAV (includes exact 58Hz Kick Punch + 7-Band MIUI Graphic EQ + 180Hz Mud-Free Reverb!)
     async function exportRemixedAudio() {
       if (!appState.audioBuffer) {
         showToast('Please load an audio file first.', 'warn');
@@ -1656,7 +1898,7 @@
       try {
         const srcBuffer = appState.audioBuffer;
         const rate = appState.isBypassed ? 1.0 : appState.speed;
-        const tailExtra = (appState.isBypassed || appState.reverbMix === 0) ? 0.3 : (appState.reverbDecay + 0.5);
+        const tailExtra = (appState.isBypassed || appState.reverbMix === 0) ? 0.3 : (Math.min(5.5, appState.reverbDecay) + 0.5);
         const effectiveDuration = (srcBuffer.duration / rate) + tailExtra;
         const sampleRate = srcBuffer.sampleRate;
         const totalSamples = Math.floor(sampleRate * effectiveDuration);
@@ -1672,47 +1914,78 @@
         }
 
         const offlineHeadroom = offlineCtx.createGain();
-        offlineHeadroom.gain.value = computeHeadroomGain();
+        offlineHeadroom.gain.value = 0.90;
 
         const offlineBass = offlineCtx.createBiquadFilter();
-        offlineBass.type = 'lowshelf';
-        offlineBass.frequency.value = 120;
+        offlineBass.type = 'peaking';
+        offlineBass.frequency.value = 58;
+        offlineBass.Q.value = 1.25;
         offlineBass.gain.value = appState.isBypassed ? 0 : appState.bassBoost;
+
+        const offlineAntiMud = offlineCtx.createBiquadFilter();
+        offlineAntiMud.type = 'peaking';
+        offlineAntiMud.frequency.value = 250;
+        offlineAntiMud.Q.value = 1.75;
+        offlineAntiMud.gain.value = computeAntiMudCut();
+
+        const offlineEqNodes = EQ_BAND_SPECS.map((spec, idx) => {
+          const f = offlineCtx.createBiquadFilter();
+          f.type = spec.type;
+          f.frequency.value = spec.freq;
+          if (spec.type === 'peaking') f.Q.value = spec.q;
+          f.gain.value = appState.isBypassed ? 0 : appState.eqGains[idx];
+          return f;
+        });
 
         const offlineHigh = offlineCtx.createBiquadFilter();
         offlineHigh.type = 'lowpass';
         offlineHigh.frequency.value = appState.isBypassed ? 20000 : appState.highCut;
         offlineHigh.Q.value = -3.0103;
 
-        const offlineWet = offlineCtx.createGain();
-        const offlineDry = offlineCtx.createGain();
+        const mixNorm = appState.reverbMix / 100;
+        const wet = appState.isBypassed ? 0 : (mixNorm * 0.48);
+        const dry = appState.isBypassed ? 1.0 : (1.0 - mixNorm * 0.16);
 
-        const wet = appState.isBypassed ? 0 : (appState.reverbMix / 100);
-        const dry = appState.isBypassed ? 1.0 : (1.0 - (appState.reverbMix / 100) * 0.38);
+        const offlineWet = offlineCtx.createGain();
         offlineWet.gain.value = wet;
+        const offlineDry = offlineCtx.createGain();
         offlineDry.gain.value = dry;
 
         const offlineMaster = offlineCtx.createGain();
         offlineMaster.gain.value = appState.volume;
 
         const offlineLimiter = offlineCtx.createDynamicsCompressor();
-        offlineLimiter.threshold.value = -2.0;
-        offlineLimiter.knee.value = 6.0;
-        offlineLimiter.ratio.value = 12.0;
-        offlineLimiter.attack.value = 0.003;
-        offlineLimiter.release.value = 0.12;
+        offlineLimiter.threshold.value = -0.6;
+        offlineLimiter.knee.value = 3.0;
+        offlineLimiter.ratio.value = 18.0;
+        offlineLimiter.attack.value = 0.001;
+        offlineLimiter.release.value = 0.025;
 
         offlineSource.connect(offlineHeadroom);
         offlineHeadroom.connect(offlineBass);
-        offlineBass.connect(offlineHigh);
+        offlineBass.connect(offlineAntiMud);
+
+        let prev = offlineAntiMud;
+        for (let i = 0; i < offlineEqNodes.length; i++) {
+          prev.connect(offlineEqNodes[i]);
+          prev = offlineEqNodes[i];
+        }
+        prev.connect(offlineHigh);
 
         offlineHigh.connect(offlineDry);
         offlineDry.connect(offlineMaster);
 
         if (wet > 0) {
+          const offlineRevLowCut = offlineCtx.createBiquadFilter();
+          offlineRevLowCut.type = 'highpass';
+          offlineRevLowCut.frequency.value = 180;
+          offlineRevLowCut.Q.value = -3.0103;
+
           const offlineConvolver = offlineCtx.createConvolver();
-          offlineConvolver.buffer = generateNaturalImpulse(offlineCtx, appState.reverbSpace, appState.reverbDecay);
-          offlineHigh.connect(offlineConvolver);
+          offlineConvolver.buffer = generateNaturalImpulse(offlineCtx, appState.reverbSpace, appState.reverbDecay, true);
+
+          offlineHigh.connect(offlineRevLowCut);
+          offlineRevLowCut.connect(offlineConvolver);
           offlineConvolver.connect(offlineWet);
           offlineWet.connect(offlineMaster);
         }
@@ -1773,25 +2046,7 @@
 
         const readmeContent = `# Resonance — Slowed & Reverb Studio
 
-An ultra-sleek, client-side Slowed + Reverb, Nightcore, and Daycore audio processor and remixer. Built with modern Web Audio API, sleek dark aesthetics, and zero backend dependencies.
-
-## 🚀 Live Demo & Free Hosting on GitHub Pages
-
-This entire project runs 100% in the browser with **zero backend server costs**! You can host it on GitHub Pages for free in 3 quick steps:
-
-### Step 1: Create a GitHub Repository
-1. Log in to [GitHub](https://github.com/) (create an account if you don't have one).
-2. Click **New Repository** (top right \`+\` menu).
-3. Name your repository (e.g. \`resonance\` or \`<username>.github.io\`).
-4. Set visibility to **Public**.
-5. Click **Create repository**.
-
-### Step 2: Add Files
-1. Drag and drop the \`index.html\` file and this \`README.md\` into the repository on GitHub.
-
-### Step 3: Enable GitHub Pages
-1. Go to your repository's **Settings** tab > **Pages**.
-2. Select branch **main** and folder **/(root)**, then click **Save**.
+An ultra-sleek, client-side Slowed + Reverb, Nightcore, and Daycore audio processor with a 7-band punchy Graphic Equalizer. Built with modern Web Audio API and zero backend dependencies.
 `;
         zip.file("README.md", readmeContent);
 
@@ -2028,7 +2283,7 @@ This entire project runs 100% in the browser with **zero backend server costs**!
       updateAudioParams();
     });
 
-    // Reverb Controls (now 100% real-time parameter updates with zero buffer rebuilds!)
+    // Reverb Controls
     reverbSpaceSelect.addEventListener('change', (e) => {
       appState.reverbSpace = e.target.value;
       reverbSpaceBadge.textContent = appState.reverbSpace.charAt(0).toUpperCase() + appState.reverbSpace.slice(1);
@@ -2060,6 +2315,27 @@ This entire project runs 100% in the browser with **zero backend server costs**!
       appState.highCut = parseInt(e.target.value);
       highCutValueText.textContent = `${(appState.highCut / 1000).toFixed(1)} kHz`;
       updateAudioParams();
+    });
+
+    // 7-Band MIUI Graphic Equalizer Controls
+    eqSliders.forEach((slider, idx) => {
+      if (!slider) return;
+      slider.addEventListener('input', (e) => {
+        appState.eqGains[idx] = parseFloat(e.target.value);
+        syncEqUI(null);
+        updateAudioParams();
+      });
+    });
+
+    document.querySelectorAll('.eq-curve-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const curveKey = btn.dataset.eqCurve;
+        const curve = EQ_CURVES[curveKey];
+        if (!curve) return;
+        appState.eqGains = [...curve];
+        syncEqUI(curveKey);
+        updateAudioParams();
+      });
     });
 
     // Noise Controls
