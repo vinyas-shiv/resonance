@@ -59,16 +59,26 @@
     }
     
     .apple-card {
-      background: rgba(22, 22, 23, 0.82);
+      background: rgba(22, 22, 23, 0.86);
       backdrop-filter: blur(20px);
       -webkit-backdrop-filter: blur(20px);
       border: 1px solid rgba(255, 255, 255, 0.08);
       border-radius: 24px;
-      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      transition: border-color 0.2s ease, box-shadow 0.2s ease;
     }
-    .apple-card:hover {
-      border-color: rgba(255, 255, 255, 0.16);
-      box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.5);
+    @media (hover: hover) {
+      .apple-card:hover {
+        border-color: rgba(255, 255, 255, 0.16);
+        box-shadow: 0 16px 40px -12px rgba(0, 0, 0, 0.5);
+      }
+    }
+    /* Avoid heavy multi-layer backdrop-filter GPU thrashing on mobile browsers */
+    @media (max-width: 768px) {
+      .apple-card {
+        background: #161617;
+        backdrop-filter: none;
+        -webkit-backdrop-filter: none;
+      }
     }
 
     /* Apple Segmented Control Pill */
@@ -87,6 +97,7 @@
       height: 5px;
       border-radius: 9999px;
       outline: none;
+      touch-action: manipulation;
       transition: background 0.2s ease;
     }
     input[type=range]:hover {
@@ -142,11 +153,8 @@
 </head>
 <body class="bg-black text-[#f5f5f7] min-h-screen flex flex-col font-sans selection:bg-[#0071e3] selection:text-white">
 
-  <!-- Apple Ambient Lighting Glow (Subtle & Elegant) -->
-  <div class="fixed inset-0 overflow-hidden pointer-events-none z-0">
-    <div class="absolute -top-32 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-gradient-to-b from-[#0071e3]/15 to-transparent rounded-full blur-[140px]"></div>
-    <div class="absolute top-1/2 -right-48 w-[400px] h-[400px] bg-[#af52de]/10 rounded-full blur-[160px]"></div>
-  </div>
+  <!-- Ambient Lighting Glow (Zero-Filter GPU-Friendly Radial Gradients) -->
+  <div class="fixed inset-0 overflow-hidden pointer-events-none z-0" style="background: radial-gradient(700px 380px at 50% 0%, rgba(0, 113, 227, 0.14), transparent 75%), radial-gradient(450px 450px at 95% 55%, rgba(175, 82, 222, 0.09), transparent 75%);"></div>
 
   <!-- Apple-Style Navigation Bar -->
   <header class="relative z-20 border-b border-white/[0.08] bg-black/75 backdrop-blur-2xl sticky top-0 px-4 lg:px-8 h-14 flex items-center justify-between">
@@ -687,6 +695,8 @@
 
   <!-- Audio Application Script -->
   <script>
+    const isMobileDevice = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent) || window.matchMedia('(max-width: 768px)').matches;
+
     // State management
     const appState = {
       audioCtx: null,
@@ -695,9 +705,20 @@
       isPlaying: false,
       isLooping: false,
       isBypassed: false,
-      playbackStartTime: 0,
+      isUserSeeking: false,
+
+      // Accurate variable-speed position tracking
+      anchorCtxTime: 0,
+      anchorTrackOffset: 0,
       pausedAt: 0,
+
       vizMode: 'bars', // 'bars' | 'wave'
+      vizRafId: null,
+      lastVizFrameTime: 0,
+      lastDomTimeUpdate: 0,
+      vizDataArray: null,
+      cachedBarGrad: null,
+      cachedWaveGrad: null,
       activePreset: 'slowed-reverb',
 
       // Audio Nodes
@@ -705,10 +726,12 @@
       bassFilter: null,
       highCutFilter: null,
       convolverNode: null,
+      convolverConnected: false,
       wetGainNode: null,
       dryGainNode: null,
       analyserNode: null,
       noiseSourceNode: null,
+      noiseFilterNode: null,
       noiseGainNode: null,
 
       // Settings
@@ -723,8 +746,9 @@
       noiseEnabled: false,
       noiseVolume: 0.15,
 
-      // Cache for generated impulses
+      // Cache for generated impulses & debounce timer
       impulseCache: {},
+      reverbDebounceTimer: null,
     };
 
     // DOM Elements
@@ -740,7 +764,7 @@
     const btnDemoTrack = document.getElementById('btnDemoTrack');
 
     const visualizerCanvas = document.getElementById('visualizerCanvas');
-    const canvasCtx = visualizerCanvas.getContext('2d');
+    const canvasCtx = visualizerCanvas.getContext('2d', { alpha: true, desynchronized: true });
     const canvasEmptyMessage = document.getElementById('canvasEmptyMessage');
     const btnVizBars = document.getElementById('btnVizBars');
     const btnVizWave = document.getElementById('btnVizWave');
@@ -800,12 +824,12 @@
     const btnModalDownloadHtml = document.getElementById('btnModalDownloadHtml');
     const btnModalDownloadZip = document.getElementById('btnModalDownloadZip');
 
-    // Apple iOS-Style Capsule Toast System
+    // Capsule Toast System
     function showToast(message, type = 'info') {
       const container = document.getElementById('toastContainer');
       const toast = document.createElement('div');
-      toast.className = 'px-4 py-2.5 rounded-full bg-[#1c1c1e]/90 backdrop-blur-2xl border border-white/15 shadow-2xl flex items-center gap-2.5 text-xs text-[#f5f5f7] transform transition-all duration-300 opacity-0 translate-y-2 pointer-events-auto font-medium';
-      
+      toast.className = 'px-4 py-2.5 rounded-full bg-[#1c1c1e]/95 border border-white/15 shadow-2xl flex items-center gap-2.5 text-xs text-[#f5f5f7] transform transition-all duration-300 opacity-0 translate-y-2 pointer-events-auto font-medium';
+
       let dotColor = '#2997ff';
       if (type === 'success') dotColor = '#30d158';
       if (type === 'warn') dotColor = '#ff9f0a';
@@ -815,7 +839,7 @@
         <span>${message}</span>
       `;
       container.appendChild(toast);
-      
+
       requestAnimationFrame(() => {
         toast.classList.remove('opacity-0', 'translate-y-2');
         toast.classList.add('opacity-100', 'translate-y-0');
@@ -824,43 +848,93 @@
       setTimeout(() => {
         toast.classList.add('opacity-0', 'translate-y-2');
         setTimeout(() => toast.remove(), 300);
-      }, 3500);
+      }, 3000);
     }
 
-    // Audio Context Initializer
+    // Audio Context Initializer — uses 'playback' latencyHint to prevent mobile buffer underruns
     function getOrCreateAudioContext() {
       if (!appState.audioCtx) {
         const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
-        appState.audioCtx = new AudioCtxClass();
+        try {
+          appState.audioCtx = new AudioCtxClass({ latencyHint: 'playback' });
+        } catch (e) {
+          appState.audioCtx = new AudioCtxClass();
+        }
       }
-      if (appState.audioCtx.state === 'suspended') {
-        appState.audioCtx.resume();
+      if (appState.audioCtx.state === 'suspended' || appState.audioCtx.state === 'interrupted') {
+        appState.audioCtx.resume().catch(() => {});
       }
       return appState.audioCtx;
     }
 
-    // Algorithmic Impulse Response Generator for Reverb
-    function generateImpulseResponse(ctx, spaceType, duration) {
+    // Resume interrupted mobile AudioContext automatically on touch or tab focus
+    function unlockMobileAudio() {
+      if (appState.audioCtx && (appState.audioCtx.state === 'suspended' || appState.audioCtx.state === 'interrupted')) {
+        appState.audioCtx.resume().catch(() => {});
+      }
+    }
+    document.addEventListener('touchstart', unlockMobileAudio, { passive: true });
+    document.addEventListener('click', unlockMobileAudio, { passive: true });
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible' && appState.isPlaying) {
+        unlockMobileAudio();
+      }
+    });
+
+    // Helper: Get accurate current track position across live speed changes
+    function getCurrentTrackPosition() {
+      if (!appState.audioBuffer) return 0;
+      if (!appState.isPlaying || !appState.audioCtx) {
+        return appState.pausedAt;
+      }
+      const rate = appState.isBypassed ? 1.0 : appState.speed;
+      const elapsedCtx = Math.max(0, appState.audioCtx.currentTime - appState.anchorCtxTime);
+      let pos = appState.anchorTrackOffset + (elapsedCtx * rate);
+      const dur = appState.audioBuffer.duration;
+      if (appState.isLooping && dur > 0) {
+        pos = pos % dur;
+      } else {
+        pos = Math.min(dur, pos);
+      }
+      return pos;
+    }
+
+    // Re-anchor track position right before changing playbackRate
+    function checkpointTrackPosition() {
+      if (appState.isPlaying && appState.audioCtx && appState.audioBuffer) {
+        appState.anchorTrackOffset = getCurrentTrackPosition();
+        appState.anchorCtxTime = appState.audioCtx.currentTime;
+      }
+    }
+
+    // Algorithmic Impulse Response Generator with caching & mobile FFT tail optimization
+    function generateImpulseResponse(ctx, spaceType, duration, forOfflineExport = false) {
       const sampleRate = ctx.sampleRate;
-      const length = Math.floor(sampleRate * Math.max(0.5, Math.min(10.0, duration)));
-      const impulse = ctx.createBuffer(2, length, sampleRate);
-      const left = impulse.getChannelData(0);
-      const right = impulse.getChannelData(1);
+      // On mobile live preview, cap real-time convolution buffer to 3.2s max to prevent DSP thread overload,
+      // while keeping full 9.0s studio length during offline WAV export!
+      const maxRealtimeDur = (!forOfflineExport && isMobileDevice) ? 3.2 : 9.0;
+      const effectiveDur = Math.max(0.5, Math.min(maxRealtimeDur, duration));
+      const roundedDurKey = effectiveDur.toFixed(1);
+      const cacheKey = `${sampleRate}_${spaceType}_${roundedDurKey}_${forOfflineExport ? 'hq' : 'rt'}`;
+
+      if (!forOfflineExport && appState.impulseCache[cacheKey]) {
+        return appState.impulseCache[cacheKey];
+      }
 
       let decayExp = 2.0;
-      let preDelay = 0.02; // seconds
+      let preDelay = 0.02;
       let diffusion = 1.0;
 
       if (spaceType === 'cathedral') {
         decayExp = 1.6;
-        preDelay = 0.04;
+        preDelay = 0.035;
       } else if (spaceType === 'hall') {
         decayExp = 2.2;
         preDelay = 0.025;
       } else if (spaceType === 'ethereal') {
-        decayExp = 1.2;
-        preDelay = 0.05;
-        diffusion = 1.2;
+        decayExp = 1.25;
+        preDelay = 0.045;
+        diffusion = 1.15;
       } else if (spaceType === 'room') {
         decayExp = 3.5;
         preDelay = 0.01;
@@ -869,25 +943,62 @@
         preDelay = 0.03;
       }
 
+      const fullLength = Math.floor(sampleRate * effectiveDur);
       const preDelaySamples = Math.floor(sampleRate * preDelay);
 
-      for (let i = 0; i < length; i++) {
-        if (i < preDelaySamples) {
-          left[i] = 0;
-          right[i] = 0;
-          continue;
-        }
-        const t = (i - preDelaySamples) / (length - preDelaySamples);
-        const envelope = Math.pow(1 - t, decayExp);
-        
-        // Filter damping for high frequencies towards tail
-        const damp = spaceType === 'underwater' ? (1 - t * 0.8) : (1 - t * 0.4);
+      // Trim inaudible tail below -54dB (0.002) on live preview to save up to 45% FFT CPU
+      let activeLength = fullLength;
+      if (!forOfflineExport) {
+        const thresholdT = 1 - Math.pow(0.002, 1 / decayExp);
+        const trimmed = preDelaySamples + Math.ceil((fullLength - preDelaySamples) * Math.min(1, thresholdT));
+        activeLength = Math.max(Math.floor(sampleRate * 0.4), Math.min(fullLength, trimmed));
+      }
 
-        left[i] = ((Math.random() * 2) - 1) * envelope * damp;
-        right[i] = ((Math.random() * 2) - 1) * envelope * damp * diffusion;
+      // Use 1-channel mono IR on mobile live preview (cuts real-time Convolver FFT cost in half while preserving spacious tail),
+      // and full 2-channel true stereo on desktop and all WAV exports
+      const numIrChannels = (!forOfflineExport && isMobileDevice) ? 1 : 2;
+      const impulse = ctx.createBuffer(numIrChannels, activeLength, sampleRate);
+      const left = impulse.getChannelData(0);
+      const right = numIrChannels > 1 ? impulse.getChannelData(1) : null;
+
+      const tailSpan = Math.max(1, fullLength - preDelaySamples);
+      for (let i = preDelaySamples; i < activeLength; i++) {
+        const t = (i - preDelaySamples) / tailSpan;
+        const envelope = Math.pow(1 - t, decayExp);
+        const damp = spaceType === 'underwater' ? (1 - t * 0.8) : (1 - t * 0.4);
+        const gain = envelope * damp;
+
+        left[i] = ((Math.random() * 2) - 1) * gain;
+        if (right) {
+          right[i] = ((Math.random() * 2) - 1) * gain * diffusion;
+        }
+      }
+
+      if (!forOfflineExport) {
+        // Bound cache size
+        const keys = Object.keys(appState.impulseCache);
+        if (keys.length > 16) {
+          delete appState.impulseCache[keys[0]];
+        }
+        appState.impulseCache[cacheKey] = impulse;
       }
 
       return impulse;
+    }
+
+    // Connect or disconnect Convolver dynamically so 0% mix / Bypass uses zero convolution CPU
+    function syncConvolverConnection() {
+      if (!appState.highCutFilter || !appState.convolverNode || !appState.wetGainNode) return;
+      const shouldConnect = !appState.isBypassed && appState.reverbMix > 0;
+      if (shouldConnect && !appState.convolverConnected) {
+        appState.highCutFilter.connect(appState.convolverNode);
+        appState.convolverConnected = true;
+      } else if (!shouldConnect && appState.convolverConnected) {
+        try {
+          appState.highCutFilter.disconnect(appState.convolverNode);
+        } catch (e) {}
+        appState.convolverConnected = false;
+      }
     }
 
     // Build the Web Audio Graph
@@ -911,7 +1022,7 @@
 
       // Reverb Nodes
       appState.convolverNode = ctx.createConvolver();
-      appState.convolverNode.buffer = generateImpulseResponse(ctx, appState.reverbSpace, appState.reverbDecay);
+      appState.convolverNode.buffer = generateImpulseResponse(ctx, appState.reverbSpace, appState.reverbDecay, false);
 
       appState.wetGainNode = ctx.createGain();
       appState.dryGainNode = ctx.createGain();
@@ -921,118 +1032,152 @@
       appState.wetGainNode.gain.value = wet;
       appState.dryGainNode.gain.value = dry;
 
-      // Analyser Node for Visualizer
+      // Analyser Node for Visualizer (lightweight FFT size)
       appState.analyserNode = ctx.createAnalyser();
-      appState.analyserNode.fftSize = 256;
-      appState.analyserNode.smoothingTimeConstant = 0.8;
+      appState.analyserNode.fftSize = isMobileDevice ? 128 : 256;
+      appState.analyserNode.smoothingTimeConstant = 0.78;
+      appState.vizDataArray = new Uint8Array(appState.analyserNode.fftSize);
 
-      // Chain Filter -> Split to Dry & Convolver -> Reconnect -> Master Gain -> Analyser -> Destination
+      // Signal Routing
       appState.bassFilter.connect(appState.highCutFilter);
 
       // Dry path
       appState.highCutFilter.connect(appState.dryGainNode);
       appState.dryGainNode.connect(appState.gainNode);
 
-      // Wet path
-      appState.highCutFilter.connect(appState.convolverNode);
+      // Wet path output (input connected on-demand via syncConvolverConnection)
       appState.convolverNode.connect(appState.wetGainNode);
       appState.wetGainNode.connect(appState.gainNode);
+      syncConvolverConnection();
 
-      // Master to analyser & speakers
+      // Master to analyser & destination
       appState.gainNode.connect(appState.analyserNode);
       appState.analyserNode.connect(ctx.destination);
 
-      // Tape / Vinyl Noise Node (Optional procedural noise)
-      setupNoiseNode(ctx);
+      syncNoiseGenerator();
     }
 
-    // Procedural Lo-Fi Vinyl / Tape Noise Generator
-    function setupNoiseNode(ctx) {
-      if (appState.noiseSourceNode) {
-        try { appState.noiseSourceNode.stop(); } catch(e) {}
-      }
+    // On-Demand Procedural Lo-Fi Vinyl / Tape Noise Generator (only runs when enabled!)
+    function syncNoiseGenerator() {
+      if (!appState.audioCtx || !appState.gainNode) return;
+      const ctx = appState.audioCtx;
+      const shouldRun = appState.noiseEnabled && !appState.isBypassed && appState.isPlaying;
 
-      const bufferSize = ctx.sampleRate * 2; // 2 seconds looped noise buffer
-      const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
-      const output = noiseBuffer.getChannelData(0);
-
-      let lastOut = 0.0;
-      for (let i = 0; i < bufferSize; i++) {
-        const white = Math.random() * 2 - 1;
-        output[i] = (lastOut + (0.02 * white)) / 1.02;
-        lastOut = output[i];
-        output[i] *= 2.5;
-
-        if (Math.random() < 0.0003) {
-          output[i] += (Math.random() * 2 - 1) * 0.8;
+      if (!shouldRun) {
+        if (appState.noiseSourceNode) {
+          try { appState.noiseSourceNode.stop(); } catch (e) {}
+          try { appState.noiseSourceNode.disconnect(); } catch (e) {}
+          appState.noiseSourceNode = null;
         }
+        return;
       }
 
-      appState.noiseSourceNode = ctx.createBufferSource();
-      appState.noiseSourceNode.buffer = noiseBuffer;
-      appState.noiseSourceNode.loop = true;
+      if (!appState.noiseGainNode) {
+        appState.noiseFilterNode = ctx.createBiquadFilter();
+        appState.noiseFilterNode.type = 'bandpass';
+        appState.noiseFilterNode.frequency.value = 1800;
+        appState.noiseFilterNode.Q.value = 1.0;
 
-      const noiseFilter = ctx.createBiquadFilter();
-      noiseFilter.type = 'bandpass';
-      noiseFilter.frequency.value = 1800;
-      noiseFilter.Q.value = 1.0;
+        appState.noiseGainNode = ctx.createGain();
+        appState.noiseFilterNode.connect(appState.noiseGainNode);
+        appState.noiseGainNode.connect(appState.gainNode);
+      }
 
-      appState.noiseGainNode = ctx.createGain();
-      appState.noiseGainNode.gain.value = appState.noiseEnabled ? appState.noiseVolume * 0.15 : 0;
+      appState.noiseGainNode.gain.setTargetAtTime(appState.noiseVolume * 0.15, ctx.currentTime, 0.02);
 
-      appState.noiseSourceNode.connect(noiseFilter);
-      noiseFilter.connect(appState.noiseGainNode);
-      appState.noiseGainNode.connect(ctx.destination);
+      if (!appState.noiseSourceNode) {
+        if (!appState.cachedNoiseBuffer) {
+          const bufferSize = ctx.sampleRate * 2;
+          const noiseBuffer = ctx.createBuffer(1, bufferSize, ctx.sampleRate);
+          const output = noiseBuffer.getChannelData(0);
+          let lastOut = 0.0;
+          for (let i = 0; i < bufferSize; i++) {
+            const white = Math.random() * 2 - 1;
+            output[i] = (lastOut + (0.02 * white)) / 1.02;
+            lastOut = output[i];
+            output[i] *= 2.5;
+            if (Math.random() < 0.0003) {
+              output[i] += (Math.random() * 2 - 1) * 0.8;
+            }
+          }
+          appState.cachedNoiseBuffer = noiseBuffer;
+        }
 
-      appState.noiseSourceNode.start(0);
+        appState.noiseSourceNode = ctx.createBufferSource();
+        appState.noiseSourceNode.buffer = appState.cachedNoiseBuffer;
+        appState.noiseSourceNode.loop = true;
+        appState.noiseSourceNode.connect(appState.noiseFilterNode);
+        appState.noiseSourceNode.start(0);
+      }
     }
 
-    // Update real-time audio parameters
+    // Smooth, click-free real-time parameter updates using setTargetAtTime
     function updateAudioParams() {
       if (!appState.audioCtx) return;
+      const now = appState.audioCtx.currentTime;
+      const smoothTau = 0.018;
 
-      // Playback speed & detune
       if (appState.sourceNode) {
-        const rate = appState.isBypassed ? 1.0 : appState.speed;
-        appState.sourceNode.playbackRate.value = rate;
+        const targetRate = appState.isBypassed ? 1.0 : appState.speed;
+        if (Math.abs(appState.sourceNode.playbackRate.value - targetRate) > 0.0001) {
+          checkpointTrackPosition();
+          appState.sourceNode.playbackRate.setTargetAtTime(targetRate, now, smoothTau);
+        }
         if (appState.sourceNode.detune) {
-          appState.sourceNode.detune.value = appState.isBypassed ? 0 : (appState.pitchSemi * 100);
+          const targetDetune = appState.isBypassed ? 0 : (appState.pitchSemi * 100);
+          appState.sourceNode.detune.setTargetAtTime(targetDetune, now, smoothTau);
         }
       }
 
-      // Bass Boost
       if (appState.bassFilter) {
-        appState.bassFilter.gain.value = appState.isBypassed ? 0 : appState.bassBoost;
+        const targetBass = appState.isBypassed ? 0 : appState.bassBoost;
+        appState.bassFilter.gain.setTargetAtTime(targetBass, now, smoothTau);
       }
 
-      // High Cut
       if (appState.highCutFilter) {
-        appState.highCutFilter.frequency.value = appState.isBypassed ? 20000 : appState.highCut;
+        const targetCut = appState.isBypassed ? 20000 : appState.highCut;
+        appState.highCutFilter.frequency.setTargetAtTime(targetCut, now, smoothTau);
       }
 
-      // Reverb Wet / Dry
+      syncConvolverConnection();
+
       if (appState.wetGainNode && appState.dryGainNode) {
         const wet = appState.isBypassed ? 0 : (appState.reverbMix / 100);
         const dry = appState.isBypassed ? 1.0 : (1.0 - (appState.reverbMix / 100) * 0.4);
-        appState.wetGainNode.gain.value = wet;
-        appState.dryGainNode.gain.value = dry;
+        appState.wetGainNode.gain.setTargetAtTime(wet, now, smoothTau);
+        appState.dryGainNode.gain.setTargetAtTime(dry, now, smoothTau);
       }
 
-      // Volume
       if (appState.gainNode) {
-        appState.gainNode.gain.value = appState.volume;
+        appState.gainNode.gain.setTargetAtTime(appState.volume, now, smoothTau);
       }
 
-      // Noise
-      if (appState.noiseGainNode) {
-        appState.noiseGainNode.gain.value = (appState.noiseEnabled && !appState.isBypassed) ? (appState.noiseVolume * 0.15) : 0;
-      }
+      syncNoiseGenerator();
     }
 
-    // Rebuild Reverb Convolver when space or decay changes
-    function refreshReverbBuffer() {
+    // Debounced Reverb Convolver rebuild so dragging Decay slider never stalls mobile CPU
+    function refreshReverbBuffer(immediate = false) {
       if (!appState.audioCtx || !appState.convolverNode) return;
-      appState.convolverNode.buffer = generateImpulseResponse(appState.audioCtx, appState.reverbSpace, appState.reverbDecay);
+      if (appState.reverbDebounceTimer) {
+        clearTimeout(appState.reverbDebounceTimer);
+        appState.reverbDebounceTimer = null;
+      }
+
+      const applyNewImpulse = () => {
+        if (!appState.audioCtx || !appState.convolverNode) return;
+        appState.convolverNode.buffer = generateImpulseResponse(
+          appState.audioCtx,
+          appState.reverbSpace,
+          appState.reverbDecay,
+          false
+        );
+      };
+
+      if (immediate) {
+        applyNewImpulse();
+      } else {
+        appState.reverbDebounceTimer = setTimeout(applyNewImpulse, 140);
+      }
     }
 
     // Playback control
@@ -1048,7 +1193,8 @@
         try {
           appState.sourceNode.onended = null;
           appState.sourceNode.stop();
-        } catch(e) {}
+          appState.sourceNode.disconnect();
+        } catch (e) {}
       }
 
       appState.sourceNode = ctx.createBufferSource();
@@ -1063,37 +1209,47 @@
 
       appState.sourceNode.connect(appState.bassFilter);
 
-      const clampedOffset = Math.max(0, Math.min(appState.audioBuffer.duration, offset));
+      const clampedOffset = Math.max(0, Math.min(appState.audioBuffer.duration - 0.01, offset));
       appState.sourceNode.start(0, clampedOffset);
-      appState.playbackStartTime = ctx.currentTime - (clampedOffset / rate);
+
+      appState.anchorCtxTime = ctx.currentTime;
+      appState.anchorTrackOffset = clampedOffset;
       appState.pausedAt = clampedOffset;
       appState.isPlaying = true;
 
-      appState.sourceNode.onended = () => {
-        if (!appState.isLooping && appState.isPlaying) {
+      const currentSource = appState.sourceNode;
+      currentSource.onended = () => {
+        if (appState.sourceNode === currentSource && !appState.isLooping && appState.isPlaying) {
           appState.isPlaying = false;
           appState.pausedAt = 0;
+          appState.anchorTrackOffset = 0;
+          syncNoiseGenerator();
           updatePlayPauseButtonUI();
+          stopVisualizerLoop();
         }
       };
 
+      syncNoiseGenerator();
       updatePlayPauseButtonUI();
       canvasEmptyMessage.classList.add('hidden');
+      startVisualizerLoop();
     }
 
     function pauseTrack() {
       if (!appState.isPlaying || !appState.sourceNode) return;
-      const ctx = appState.audioCtx;
-      const rate = appState.isBypassed ? 1.0 : appState.speed;
-      appState.pausedAt = (ctx.currentTime - appState.playbackStartTime) * rate;
-      
+      appState.pausedAt = getCurrentTrackPosition();
+
       try {
         appState.sourceNode.onended = null;
         appState.sourceNode.stop();
-      } catch(e) {}
+        appState.sourceNode.disconnect();
+      } catch (e) {}
+      appState.sourceNode = null;
 
       appState.isPlaying = false;
+      syncNoiseGenerator();
       updatePlayPauseButtonUI();
+      stopVisualizerLoop();
     }
 
     function togglePlayPause() {
@@ -1104,7 +1260,7 @@
       if (appState.isPlaying) {
         pauseTrack();
       } else {
-        const offset = appState.pausedAt >= appState.audioBuffer.duration ? 0 : appState.pausedAt;
+        const offset = appState.pausedAt >= appState.audioBuffer.duration - 0.05 ? 0 : appState.pausedAt;
         playTrack(offset);
       }
     }
@@ -1121,7 +1277,6 @@
       }
     }
 
-    // Format seconds to mm:ss
     function formatTime(sec) {
       if (isNaN(sec) || sec < 0) return '0:00';
       const m = Math.floor(sec / 60);
@@ -1129,7 +1284,7 @@
       return `${m}:${s < 10 ? '0' : ''}${s}`;
     }
 
-    // Decode Audio File
+    // Decode Audio File (Promise-compatible with legacy Safari callback fallback)
     function loadAudioFile(file) {
       const ctx = getOrCreateAudioContext();
       showToast(`Loading "${file.name}"...`, 'info');
@@ -1137,10 +1292,11 @@
       const reader = new FileReader();
       reader.onload = function(e) {
         const arrayBuffer = e.target.result;
-        ctx.decodeAudioData(arrayBuffer, function(decodedBuffer) {
+        const onDecoded = function(decodedBuffer) {
+          if (appState.isPlaying) pauseTrack();
           appState.audioBuffer = decodedBuffer;
           appState.pausedAt = 0;
-          if (appState.isPlaying) pauseTrack();
+          appState.anchorTrackOffset = 0;
 
           trackTitle.textContent = file.name;
           trackDuration.textContent = formatTime(decodedBuffer.duration);
@@ -1155,9 +1311,19 @@
 
           showToast(`"${file.name}" ready to remix.`, 'success');
           playTrack(0);
-        }, function(err) {
+        };
+        const onError = function() {
           showToast('Failed to decode audio file.', 'warn');
-        });
+        };
+
+        try {
+          const decodeResult = ctx.decodeAudioData(arrayBuffer, onDecoded, onError);
+          if (decodeResult && typeof decodeResult.catch === 'function') {
+            decodeResult.catch(() => {});
+          }
+        } catch (err) {
+          onError();
+        }
       };
       reader.readAsArrayBuffer(file);
     }
@@ -1170,7 +1336,7 @@
       const sampleRate = ctx.sampleRate;
       const duration = 16.0;
       const length = Math.floor(sampleRate * duration);
-      
+
       const offlineCtx = new (window.OfflineAudioContext || window.webkitOfflineAudioContext)(2, length, sampleRate);
 
       const chordProgressions = [
@@ -1250,9 +1416,10 @@
       }
 
       offlineCtx.startRendering().then(renderedBuffer => {
+        if (appState.isPlaying) pauseTrack();
         appState.audioBuffer = renderedBuffer;
         appState.pausedAt = 0;
-        if (appState.isPlaying) pauseTrack();
+        appState.anchorTrackOffset = 0;
 
         trackTitle.textContent = "Dreamwave Sunset (Demo Track).wav";
         trackDuration.textContent = formatTime(renderedBuffer.duration);
@@ -1271,91 +1438,124 @@
       });
     }
 
-    // Real-Time Canvas Visualizer Loop (Apple Music Aesthetic)
+    // Zero-Allocation, DPR-Capped Canvas Visualizer (pauses RAF when idle to save battery & CPU)
     function resizeCanvas() {
       const rect = visualizerCanvas.parentElement.getBoundingClientRect();
-      visualizerCanvas.width = rect.width * (window.devicePixelRatio || 1);
-      visualizerCanvas.height = rect.height * (window.devicePixelRatio || 1);
-    }
-    window.addEventListener('resize', resizeCanvas);
-    resizeCanvas();
+      // Cap DPR to 1.25 on mobile and 2.0 on desktop to prevent 9x Retina pixel fill lag
+      const maxDpr = isMobileDevice ? 1.25 : 2.0;
+      const dpr = Math.min(window.devicePixelRatio || 1, maxDpr);
+      visualizerCanvas.width = Math.max(1, Math.floor(rect.width * dpr));
+      visualizerCanvas.height = Math.max(1, Math.floor(rect.height * dpr));
 
-    function drawVisualizer() {
-      requestAnimationFrame(drawVisualizer);
+      // Pre-build reusable gradients once per resize instead of 44 times per frame!
+      const barGrad = canvasCtx.createLinearGradient(0, visualizerCanvas.height, 0, 0);
+      barGrad.addColorStop(0, '#0071e3');
+      barGrad.addColorStop(0.55, '#64d2ff');
+      barGrad.addColorStop(1, '#af52de');
+      appState.cachedBarGrad = barGrad;
+
+      const waveGrad = canvasCtx.createLinearGradient(0, 0, visualizerCanvas.width, 0);
+      waveGrad.addColorStop(0, '#2997ff');
+      waveGrad.addColorStop(0.5, '#64d2ff');
+      waveGrad.addColorStop(1, '#af52de');
+      appState.cachedWaveGrad = waveGrad;
+
+      if (!appState.isPlaying) {
+        drawIdleVisualizerLine();
+      }
+    }
+
+    function drawIdleVisualizerLine() {
+      const width = visualizerCanvas.width;
+      const height = visualizerCanvas.height;
+      canvasCtx.clearRect(0, 0, width, height);
+      canvasCtx.beginPath();
+      canvasCtx.moveTo(0, height / 2);
+      canvasCtx.lineTo(width, height / 2);
+      canvasCtx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      canvasCtx.lineWidth = 1.5;
+      canvasCtx.stroke();
+    }
+
+    function startVisualizerLoop() {
+      if (appState.vizRafId !== null) return;
+      appState.vizRafId = requestAnimationFrame(drawVisualizer);
+    }
+
+    function stopVisualizerLoop() {
+      if (appState.vizRafId !== null) {
+        cancelAnimationFrame(appState.vizRafId);
+        appState.vizRafId = null;
+      }
+      drawIdleVisualizerLine();
+    }
+
+    function drawVisualizer(timestamp) {
+      if (!appState.isPlaying) {
+        appState.vizRafId = null;
+        drawIdleVisualizerLine();
+        return;
+      }
+
+      appState.vizRafId = requestAnimationFrame(drawVisualizer);
+
+      // Throttle canvas rendering to ~30fps on mobile so touch & audio threads stay 100% stutter-free
+      const minFrameInterval = isMobileDevice ? 32 : 16;
+      if (timestamp - appState.lastVizFrameTime < minFrameInterval) {
+        return;
+      }
+      appState.lastVizFrameTime = timestamp;
+
+      // Throttle DOM text & slider updates to 5Hz (every 200ms), skipping slider update while finger is dragging
+      if (appState.audioBuffer && appState.audioCtx && (timestamp - appState.lastDomTimeUpdate >= 200)) {
+        appState.lastDomTimeUpdate = timestamp;
+        const boundedSec = getCurrentTrackPosition();
+        const durationSec = appState.audioBuffer.duration;
+        if (!appState.isUserSeeking && durationSec > 0) {
+          timeCurrent.textContent = formatTime(boundedSec);
+          seekSlider.value = ((boundedSec / durationSec) * 100).toFixed(1);
+        }
+      }
 
       const width = visualizerCanvas.width;
       const height = visualizerCanvas.height;
-
-      if (appState.isPlaying && appState.audioBuffer && appState.audioCtx) {
-        const rate = appState.isBypassed ? 1.0 : appState.speed;
-        const currentSec = (appState.audioCtx.currentTime - appState.playbackStartTime) * rate;
-        const durationSec = appState.audioBuffer.duration;
-        const boundedSec = Math.max(0, Math.min(durationSec, currentSec));
-
-        timeCurrent.textContent = formatTime(boundedSec);
-        seekSlider.value = (boundedSec / durationSec) * 100;
-      }
-
       canvasCtx.clearRect(0, 0, width, height);
 
-      if (!appState.analyserNode || !appState.isPlaying) {
-        canvasCtx.beginPath();
-        canvasCtx.moveTo(0, height / 2);
-        canvasCtx.lineTo(width, height / 2);
-        canvasCtx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-        canvasCtx.lineWidth = 1.5;
-        canvasCtx.stroke();
+      if (!appState.analyserNode || !appState.vizDataArray) {
+        drawIdleVisualizerLine();
         return;
       }
 
       if (appState.vizMode === 'bars') {
-        const bufferLength = appState.analyserNode.frequencyBinCount;
-        const dataArray = new Uint8Array(bufferLength);
-        appState.analyserNode.getByteFrequencyData(dataArray);
+        appState.analyserNode.getByteFrequencyData(appState.vizDataArray);
+        const binCount = appState.analyserNode.frequencyBinCount;
+        const barCount = isMobileDevice ? 32 : 44;
+        const stepWidth = width / barCount;
+        const barWidth = stepWidth * 0.70;
 
-        const barCount = 44;
-        const barWidth = (width / barCount) * 0.70;
-        const gap = (width / barCount) * 0.30;
+        canvasCtx.fillStyle = appState.cachedBarGrad;
 
         for (let i = 0; i < barCount; i++) {
-          const index = Math.floor((i / barCount) * (bufferLength * 0.75));
-          const val = dataArray[index] / 255.0;
-          const barHeight = val * (height * 0.85);
-
-          const x = i * (barWidth + gap);
+          const index = Math.floor((i / barCount) * (binCount * 0.78));
+          const val = appState.vizDataArray[index] / 255.0;
+          const barHeight = Math.max(2, val * (height * 0.85));
+          const x = i * stepWidth;
           const y = height - barHeight;
-
-          // Apple Siri / Apple Music Spectrum (Cyan to Blue to Purple)
-          const grad = canvasCtx.createLinearGradient(0, height, 0, y);
-          grad.addColorStop(0, '#0071e3');
-          grad.addColorStop(0.5, '#64d2ff');
-          grad.addColorStop(1, '#af52de');
-
-          canvasCtx.fillStyle = grad;
-          canvasCtx.beginPath();
-          canvasCtx.roundRect(x, y, barWidth, barHeight, [4, 4, 0, 0]);
-          canvasCtx.fill();
+          canvasCtx.fillRect(x, y, barWidth, barHeight);
         }
       } else {
         const bufferLength = appState.analyserNode.fftSize;
-        const dataArray = new Uint8Array(bufferLength);
-        appState.analyserNode.getByteTimeDomainData(dataArray);
+        appState.analyserNode.getByteTimeDomainData(appState.vizDataArray);
 
-        canvasCtx.lineWidth = 2.5;
-        const grad = canvasCtx.createLinearGradient(0, 0, width, 0);
-        grad.addColorStop(0, '#2997ff');
-        grad.addColorStop(0.5, '#64d2ff');
-        grad.addColorStop(1, '#af52de');
-        canvasCtx.strokeStyle = grad;
-
+        canvasCtx.lineWidth = isMobileDevice ? 2 : 2.5;
+        canvasCtx.strokeStyle = appState.cachedWaveGrad;
         canvasCtx.beginPath();
+
         const sliceWidth = width / bufferLength;
         let x = 0;
-
         for (let i = 0; i < bufferLength; i++) {
-          const v = dataArray[i] / 128.0;
+          const v = appState.vizDataArray[i] / 128.0;
           const y = (v * height) / 2;
-
           if (i === 0) {
             canvasCtx.moveTo(x, y);
           } else {
@@ -1363,11 +1563,12 @@
           }
           x += sliceWidth;
         }
-
         canvasCtx.stroke();
       }
     }
-    drawVisualizer();
+
+    window.addEventListener('resize', resizeCanvas);
+    resizeCanvas();
 
     // Preset configurations
     const PRESETS = {
@@ -1496,7 +1697,7 @@
         btnToggleNoise.classList.remove('bg-[#af52de]', 'text-white');
       }
 
-      refreshReverbBuffer();
+      refreshReverbBuffer(true);
       updateAudioParams();
       showToast(`Preset "${p.name}" applied`, 'info');
     }
@@ -1507,7 +1708,7 @@
       const sampleRate = audioBuffer.sampleRate;
       const format = 1; // PCM
       const bitDepth = 16;
-      
+
       const bytesPerSample = bitDepth / 8;
       const blockAlign = numChannels * bytesPerSample;
       const length = audioBuffer.length;
@@ -1515,16 +1716,16 @@
       const dataSize = length * blockAlign;
       const headerSize = 44;
       const totalSize = headerSize + dataSize;
-      
+
       const arrayBuffer = new ArrayBuffer(totalSize);
       const view = new DataView(arrayBuffer);
-      
+
       function writeString(v, offset, str) {
         for (let i = 0; i < str.length; i++) {
           v.setUint8(offset + i, str.charCodeAt(i));
         }
       }
-      
+
       writeString(view, 0, 'RIFF');
       view.setUint32(4, 36 + dataSize, true);
       writeString(view, 8, 'WAVE');
@@ -1538,12 +1739,12 @@
       view.setUint16(34, bitDepth, true);
       writeString(view, 36, 'data');
       view.setUint32(40, dataSize, true);
-      
+
       const channels = [];
       for (let ch = 0; ch < numChannels; ch++) {
         channels.push(audioBuffer.getChannelData(ch));
       }
-      
+
       let offset = 44;
       for (let i = 0; i < length; i++) {
         for (let ch = 0; ch < numChannels; ch++) {
@@ -1554,11 +1755,11 @@
           offset += 2;
         }
       }
-      
+
       return new Blob([view], { type: 'audio/wav' });
     }
 
-    // Offline Export to WAV
+    // Offline Export to WAV (Full Studio-Quality Stereo Convolution)
     async function exportRemixedAudio() {
       if (!appState.audioBuffer) {
         showToast('Please load an audio file first.', 'warn');
@@ -1596,9 +1797,6 @@
         offlineHigh.type = 'lowpass';
         offlineHigh.frequency.value = appState.isBypassed ? 20000 : appState.highCut;
 
-        const offlineConvolver = offlineCtx.createConvolver();
-        offlineConvolver.buffer = generateImpulseResponse(offlineCtx, appState.reverbSpace, appState.reverbDecay);
-
         const offlineWet = offlineCtx.createGain();
         const offlineDry = offlineCtx.createGain();
 
@@ -1616,12 +1814,15 @@
         offlineHigh.connect(offlineDry);
         offlineDry.connect(offlineMaster);
 
-        offlineHigh.connect(offlineConvolver);
-        offlineConvolver.connect(offlineWet);
-        offlineWet.connect(offlineMaster);
+        if (wet > 0) {
+          const offlineConvolver = offlineCtx.createConvolver();
+          offlineConvolver.buffer = generateImpulseResponse(offlineCtx, appState.reverbSpace, appState.reverbDecay, true);
+          offlineHigh.connect(offlineConvolver);
+          offlineConvolver.connect(offlineWet);
+          offlineWet.connect(offlineMaster);
+        }
 
         offlineMaster.connect(offlineCtx.destination);
-
         offlineSource.start(0);
 
         renderProgressBar.style.width = '45%';
@@ -1642,7 +1843,7 @@
         a.download = `${originalName}_slowed_reverb.wav`;
         document.body.appendChild(a);
         a.click();
-        
+
         setTimeout(() => {
           document.body.removeChild(a);
           URL.revokeObjectURL(downloadUrl);
@@ -1685,27 +1886,16 @@ This entire project runs 100% in the browser with **zero backend server costs**!
 ### Step 1: Create a GitHub Repository
 1. Log in to [GitHub](https://github.com/) (create an account if you don't have one).
 2. Click **New Repository** (top right \`+\` menu).
-3. Name your repository (e.g. \`slowed-reverb\` or \`<username>.github.io\`).
+3. Name your repository (e.g. \`resonance\` or \`<username>.github.io\`).
 4. Set visibility to **Public**.
 5. Click **Create repository**.
 
 ### Step 2: Add Files
-1. Drag and drop the \`index.html\` file and this \`README.md\` into the repository on GitHub, or push via git:
-   \`\`\`bash
-   git init
-   git add .
-   git commit -m "Initial commit of Resonance Slowed & Reverb Studio"
-   git branch -M main
-   git remote add origin https://github.com/<your-username>/<your-repo-name>.git
-   git push -u origin main
-   \`\`\`
+1. Drag and drop the \`index.html\` file and this \`README.md\` into the repository on GitHub.
 
 ### Step 3: Enable GitHub Pages
-1. Go to your repository's **Settings** tab.
-2. In the left sidebar, click **Pages**.
-3. Under **Branch**, select **main** (or \`master\`), leave the folder as **/(root)**, and click **Save**.
-4. In about 30 seconds, your site will be live at:
-   \`https://<your-username>.github.io/<your-repo-name>/\`
+1. Go to your repository's **Settings** tab > **Pages**.
+2. Select branch **main** and folder **/(root)**, then click **Save**.
 `;
         zip.file("README.md", readmeContent);
 
@@ -1806,31 +1996,27 @@ This entire project runs 100% in the browser with **zero backend server costs**!
 
     btnRewind.addEventListener('click', () => {
       if (!appState.audioBuffer) return;
-      const rate = appState.isBypassed ? 1.0 : appState.speed;
-      const current = appState.isPlaying ? 
-        ((appState.audioCtx.currentTime - appState.playbackStartTime) * rate) : appState.pausedAt;
+      const current = getCurrentTrackPosition();
       const target = Math.max(0, current - 5);
+      timeCurrent.textContent = formatTime(target);
+      seekSlider.value = ((target / appState.audioBuffer.duration) * 100).toFixed(1);
       if (appState.isPlaying) {
         playTrack(target);
       } else {
         appState.pausedAt = target;
-        timeCurrent.textContent = formatTime(target);
-        seekSlider.value = (target / appState.audioBuffer.duration) * 100;
       }
     });
 
     btnForward.addEventListener('click', () => {
       if (!appState.audioBuffer) return;
-      const rate = appState.isBypassed ? 1.0 : appState.speed;
-      const current = appState.isPlaying ? 
-        ((appState.audioCtx.currentTime - appState.playbackStartTime) * rate) : appState.pausedAt;
+      const current = getCurrentTrackPosition();
       const target = Math.min(appState.audioBuffer.duration, current + 5);
+      timeCurrent.textContent = formatTime(target);
+      seekSlider.value = ((target / appState.audioBuffer.duration) * 100).toFixed(1);
       if (appState.isPlaying) {
         playTrack(target);
       } else {
         appState.pausedAt = target;
-        timeCurrent.textContent = formatTime(target);
-        seekSlider.value = (target / appState.audioBuffer.duration) * 100;
       }
     });
 
@@ -1849,10 +2035,11 @@ This entire project runs 100% in the browser with **zero backend server costs**!
     });
 
     btnBypass.addEventListener('click', () => {
+      checkpointTrackPosition();
       appState.isBypassed = !appState.isBypassed;
       bypassStatus.textContent = appState.isBypassed ? 'ON (Original)' : 'OFF';
       bypassStatus.className = appState.isBypassed ? 'text-[#ff9f0a] font-bold' : 'text-[#f5f5f7]';
-      
+
       if (appState.isBypassed) {
         btnBypass.classList.add('border-[#ff9f0a]/40', 'bg-[#ff9f0a]/10');
       } else {
@@ -1863,11 +2050,30 @@ This entire project runs 100% in the browser with **zero backend server costs**!
       showToast(appState.isBypassed ? 'FX Bypassed (Original)' : 'FX Active', 'info');
     });
 
-    // Seek Slider
+    // Stutter-free Seek Scrubber (updates label while dragging, commits audio seek on release)
+    seekSlider.addEventListener('pointerdown', () => {
+      appState.isUserSeeking = true;
+    });
+    seekSlider.addEventListener('touchstart', () => {
+      appState.isUserSeeking = true;
+    }, { passive: true });
+
     seekSlider.addEventListener('input', (e) => {
       if (!appState.audioBuffer) return;
+      appState.isUserSeeking = true;
       const percent = parseFloat(e.target.value);
       const targetSec = (percent / 100) * appState.audioBuffer.duration;
+      timeCurrent.textContent = formatTime(targetSec);
+    });
+
+    seekSlider.addEventListener('change', (e) => {
+      if (!appState.audioBuffer) {
+        appState.isUserSeeking = false;
+        return;
+      }
+      const percent = parseFloat(e.target.value);
+      const targetSec = (percent / 100) * appState.audioBuffer.duration;
+      appState.isUserSeeking = false;
       timeCurrent.textContent = formatTime(targetSec);
       if (appState.isPlaying) {
         playTrack(targetSec);
@@ -1879,9 +2085,7 @@ This entire project runs 100% in the browser with **zero backend server costs**!
     // Volume Slider
     volumeSlider.addEventListener('input', (e) => {
       appState.volume = parseFloat(e.target.value);
-      if (appState.gainNode) {
-        appState.gainNode.gain.value = appState.volume;
-      }
+      updateAudioParams();
     });
 
     btnMute.addEventListener('click', () => {
@@ -1893,9 +2097,7 @@ This entire project runs 100% in the browser with **zero backend server costs**!
         appState.volume = parseFloat(volumeSlider.dataset.prevVolume || 0.85);
         volumeSlider.value = appState.volume;
       }
-      if (appState.gainNode) {
-        appState.gainNode.gain.value = appState.volume;
-      }
+      updateAudioParams();
     });
 
     // Speed Slider
@@ -1943,7 +2145,7 @@ This entire project runs 100% in the browser with **zero backend server costs**!
     reverbSpaceSelect.addEventListener('change', (e) => {
       appState.reverbSpace = e.target.value;
       reverbSpaceBadge.textContent = appState.reverbSpace.charAt(0).toUpperCase() + appState.reverbSpace.slice(1);
-      refreshReverbBuffer();
+      refreshReverbBuffer(true);
     });
 
     reverbMixSlider.addEventListener('input', (e) => {
@@ -1955,7 +2157,7 @@ This entire project runs 100% in the browser with **zero backend server costs**!
     reverbDecaySlider.addEventListener('input', (e) => {
       appState.reverbDecay = parseFloat(e.target.value);
       reverbDecayValueText.textContent = `${appState.reverbDecay.toFixed(1)}s`;
-      refreshReverbBuffer();
+      refreshReverbBuffer(false);
     });
 
     // Bass & High Cut Controls
@@ -2006,7 +2208,6 @@ This entire project runs 100% in the browser with **zero backend server costs**!
     // Export WAV
     btnExportWav.addEventListener('click', exportRemixedAudio);
 
-
     btnCloseModal.addEventListener('click', () => {
       githubModal.classList.add('hidden');
     });
@@ -2019,7 +2220,6 @@ This entire project runs 100% in the browser with **zero backend server costs**!
 
     btnModalDownloadZip.addEventListener('click', exportGitHubRepoZip);
     btnModalDownloadHtml.addEventListener('click', downloadStandaloneHtml);
-
   </script>
 </body>
 </html>
