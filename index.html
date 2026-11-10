@@ -461,9 +461,9 @@
         <div class="space-y-2">
           <div class="flex items-center justify-between text-xs text-[#f5f5f7]">
             <span>Mix (Wet / Dry)</span>
-            <span id="reverbMixValueText" class="font-mono text-[#64d2ff] font-medium tabular-nums">45%</span>
+            <span id="reverbMixValueText" class="font-mono text-[#64d2ff] font-medium tabular-nums">40%</span>
           </div>
-          <input type="range" id="reverbMixSlider" min="0" max="100" step="1" value="45" class="w-full">
+          <input type="range" id="reverbMixSlider" min="0" max="100" step="1" value="40" class="w-full">
           <div class="flex justify-between text-[11px] text-[#6e6e73]">
             <span>0% Dry</span>
             <span>50% Balanced</span>
@@ -475,9 +475,9 @@
         <div class="space-y-2">
           <div class="flex items-center justify-between text-xs text-[#f5f5f7]">
             <span>Decay Tail</span>
-            <span id="reverbDecayValueText" class="font-mono text-[#64d2ff] font-medium tabular-nums">4.0s</span>
+            <span id="reverbDecayValueText" class="font-mono text-[#64d2ff] font-medium tabular-nums">3.8s</span>
           </div>
-          <input type="range" id="reverbDecaySlider" min="0.5" max="9.0" step="0.1" value="4.0" class="w-full">
+          <input type="range" id="reverbDecaySlider" min="0.5" max="9.0" step="0.1" value="3.8" class="w-full">
           <div class="flex justify-between text-[11px] text-[#6e6e73]">
             <span>0.5s Short</span>
             <span>4.0s Lush</span>
@@ -680,17 +680,15 @@
 
   <!-- Audio Application Script -->
   <script>
-    // Acoustic space models for the native C++ Delay-Network Reverb Engine
-    // Uses prime comb delays + Butterworth damping + unity-gain Schroeder allpass diffusers (zero FFT overhead!)
+    // Acoustic space profiles for Natural Lush Convolution Reverb
+    // Carefully damped and shaped for warm, dreamy Slowed + Reverb atmosphere (zero metallic ringing)
     const REVERB_SPACES = {
-      cathedral:  { sizeScale: 1.28, preDelay: 0.038, dampFreq: 4200, crossMix: 0.36 },
-      hall:       { sizeScale: 1.08, preDelay: 0.024, dampFreq: 5400, crossMix: 0.32 },
-      ethereal:   { sizeScale: 1.44, preDelay: 0.048, dampFreq: 6800, crossMix: 0.42 },
-      room:       { sizeScale: 0.72, preDelay: 0.010, dampFreq: 4600, crossMix: 0.25 },
-      underwater: { sizeScale: 1.16, preDelay: 0.032, dampFreq: 1350, crossMix: 0.38 },
+      cathedral:  { decayExp: 2.2, preDelay: 0.028, dampRoll: 0.52, lpAlpha: 0.42, targetRms: 0.19 },
+      hall:       { decayExp: 2.7, preDelay: 0.020, dampRoll: 0.44, lpAlpha: 0.48, targetRms: 0.18 },
+      ethereal:   { decayExp: 1.75, preDelay: 0.038, dampRoll: 0.35, lpAlpha: 0.52, targetRms: 0.21 },
+      room:       { decayExp: 3.8, preDelay: 0.008, dampRoll: 0.60, lpAlpha: 0.40, targetRms: 0.16 },
+      underwater: { decayExp: 2.4, preDelay: 0.025, dampRoll: 0.82, lpAlpha: 0.22, targetRms: 0.18 },
     };
-
-    const BASE_COMB_DELAYS = [0.0297, 0.0371, 0.0411, 0.0437, 0.0479, 0.0533];
 
     // State management
     const appState = {
@@ -714,8 +712,8 @@
       headroomNode: null,
       bassFilter: null,
       highCutFilter: null,
-      reverbEngine: null,
-      reverbConnected: false,
+      convolverNode: null,
+      convolverConnected: false,
       wetGainNode: null,
       dryGainNode: null,
       gainNode: null,
@@ -729,13 +727,17 @@
       speed: 0.85,
       pitchSemi: 0,
       reverbSpace: 'cathedral',
-      reverbMix: 45, // percent
-      reverbDecay: 4.0, // seconds
+      reverbMix: 40, // percent (gentle musical balance)
+      reverbDecay: 3.8, // seconds
       bassBoost: 6.0, // dB
       highCut: 14000, // Hz
       volume: 0.85,
       noiseEnabled: false,
       noiseVolume: 0.15,
+
+      // Reverb impulse cache and debounce
+      impulseCache: {},
+      reverbDebounceTimer: null,
     };
 
     // DOM Elements
@@ -832,7 +834,7 @@
       }, 3000);
     }
 
-    // Audio Context Initializer with large 'playback' hardware buffer for stutter-free mobile audio
+    // Audio Context Initializer
     function getOrCreateAudioContext() {
       if (!appState.audioCtx) {
         const AudioCtxClass = window.AudioContext || window.webkitAudioContext;
@@ -861,134 +863,77 @@
       }
     });
 
-    // Helper: Build a single exact unity-gain Schroeder Allpass Diffuser Stage
-    function createAllpassStage(ctx, delaySec, coeff) {
-      const sumIn = ctx.createGain();
-      const apDelay = ctx.createDelay(0.05);
-      apDelay.delayTime.value = delaySec;
-
-      const fbGain = ctx.createGain();
-      fbGain.gain.value = coeff;
-
-      const ffGain = ctx.createGain();
-      ffGain.gain.value = -coeff;
-
-      const sumOut = ctx.createGain();
-
-      // w = x + a * w[n - D], y = -a * w + w[n - D] => |H(w)| = 1.0 across all frequencies
-      sumIn.connect(apDelay);
-      apDelay.connect(fbGain);
-      fbGain.connect(sumIn);
-
-      sumIn.connect(ffGain);
-      ffGain.connect(sumOut);
-      apDelay.connect(sumOut);
-
-      return { input: sumIn, output: sumOut };
-    }
-
-    // Build Ultra-Lightweight Native Algorithmic Stereo Reverb Engine (Zero Convolver FFT Threads!)
-    function createAlgorithmicReverb(ctx, spaceKey, decaySeconds) {
+    // Natural, Warm Impulse Response Generator
+    // Energy-normalized, smoothly filtered, and cosine-tapered so the reverb floats softly behind the music
+    function generateNaturalImpulse(ctx, spaceKey, decaySeconds) {
       const cfg = REVERB_SPACES[spaceKey] || REVERB_SPACES.cathedral;
+      const sampleRate = ctx.sampleRate;
+      const safeDuration = Math.max(0.6, Math.min(5.5, decaySeconds));
+      const cacheKey = `${sampleRate}_${spaceKey}_${safeDuration.toFixed(1)}`;
 
-      const input = ctx.createGain();
-      input.gain.value = 0.28; // Internal tank headroom
-
-      const preDelay = ctx.createDelay(0.2);
-      preDelay.delayTime.value = cfg.preDelay;
-
-      // Highpass at 95Hz keeps heavy 808 sub-bass clean and prevents muddy low-end rumble
-      const lowCut = ctx.createBiquadFilter();
-      lowCut.type = 'highpass';
-      lowCut.frequency.value = 95;
-      lowCut.Q.value = -3.0103; // Butterworth flat (no resonant bump)
-
-      input.connect(preDelay);
-      preDelay.connect(lowCut);
-
-      const leftTank = ctx.createGain();
-      const rightTank = ctx.createGain();
-      const combs = [];
-
-      const safeDecay = Math.max(0.4, Math.min(10.0, decaySeconds));
-
-      for (let i = 0; i < BASE_COMB_DELAYS.length; i++) {
-        const dTime = BASE_COMB_DELAYS[i] * cfg.sizeScale;
-        const combDelay = ctx.createDelay(0.2);
-        combDelay.delayTime.value = dTime;
-
-        // Butterworth lowpass damping inside feedback loop (Q = -3.0103 dB ensures |H(w)| <= 1.0 unconditionally)
-        const dampFilter = ctx.createBiquadFilter();
-        dampFilter.type = 'lowpass';
-        dampFilter.frequency.value = cfg.dampFreq;
-        dampFilter.Q.value = -3.0103;
-
-        const fbGain = ctx.createGain();
-        fbGain.gain.value = Math.min(0.92, Math.pow(0.001, dTime / safeDecay));
-
-        lowCut.connect(combDelay);
-        combDelay.connect(dampFilter);
-        dampFilter.connect(fbGain);
-        fbGain.connect(combDelay);
-
-        // Decorrelated stereo routing
-        const panPrimary = ctx.createGain();
-        panPrimary.gain.value = 1.0;
-        const panCross = ctx.createGain();
-        panCross.gain.value = cfg.crossMix;
-
-        combDelay.connect(panPrimary);
-        combDelay.connect(panCross);
-
-        if (i % 2 === 0) {
-          panPrimary.connect(leftTank);
-          panCross.connect(rightTank);
-        } else {
-          panPrimary.connect(rightTank);
-          panCross.connect(leftTank);
-        }
-
-        combs.push({ baseDelay: BASE_COMB_DELAYS[i], combDelay, dampFilter, fbGain, panCross });
+      if (appState.impulseCache[cacheKey]) {
+        return appState.impulseCache[cacheKey];
       }
 
-      // Two series Schroeder allpass diffusers per stereo channel (all delays > 5ms, safe for 128-frame quantum)
-      const apL1 = createAllpassStage(ctx, 0.0053, 0.62);
-      const apL2 = createAllpassStage(ctx, 0.0117, 0.58);
-      leftTank.connect(apL1.input);
-      apL1.output.connect(apL2.input);
+      const length = Math.floor(sampleRate * safeDuration);
+      const preDelaySamples = Math.floor(sampleRate * cfg.preDelay);
+      const bodyLen = Math.max(1, length - preDelaySamples);
 
-      const apR1 = createAllpassStage(ctx, 0.0061, 0.62);
-      const apR2 = createAllpassStage(ctx, 0.0131, 0.58);
-      rightTank.connect(apR1.input);
-      apR1.output.connect(apR2.input);
+      const buffer = ctx.createBuffer(2, length, sampleRate);
+      const left = buffer.getChannelData(0);
+      const right = buffer.getChannelData(1);
 
-      const stereoMerger = ctx.createChannelMerger(2);
-      apL2.output.connect(stereoMerger, 0, 0);
-      apR2.output.connect(stereoMerger, 0, 1);
+      const fadeInLen = Math.min(bodyLen, Math.floor(sampleRate * 0.018)); // 18ms soft onset (zero click/transient harshness)
+      let sumSqL = 0;
+      let sumSqR = 0;
 
-      const output = ctx.createGain();
-      output.gain.value = 1.35;
-      stereoMerger.connect(output);
+      let lastL = 0;
+      let lastR = 0;
+      const alpha = cfg.lpAlpha;
 
-      return {
-        input,
-        output,
-        updateParams(newSpaceKey, newDecaySeconds, now) {
-          const c = REVERB_SPACES[newSpaceKey] || REVERB_SPACES.cathedral;
-          const dSec = Math.max(0.4, Math.min(10.0, newDecaySeconds));
-          const tau = 0.025;
-
-          preDelay.delayTime.setTargetAtTime(c.preDelay, now, tau);
-          for (let i = 0; i < combs.length; i++) {
-            const dTime = combs[i].baseDelay * c.sizeScale;
-            const g = Math.min(0.92, Math.pow(0.001, dTime / dSec));
-            combs[i].combDelay.delayTime.setTargetAtTime(dTime, now, tau);
-            combs[i].dampFilter.frequency.setTargetAtTime(c.dampFreq, now, tau);
-            combs[i].fbGain.gain.setTargetAtTime(g, now, tau);
-            combs[i].panCross.gain.setTargetAtTime(c.crossMix, now, tau);
-          }
+      for (let i = 0; i < bodyLen; i++) {
+        const t = i / bodyLen;
+        let env = Math.pow(1.0 - t, cfg.decayExp);
+        if (i < fadeInLen) {
+          const fi = Math.sin((i / fadeInLen) * (Math.PI / 2));
+          env *= (fi * fi);
         }
-      };
+        const damp = (1.0 - t * cfg.dampRoll);
+        const gain = env * damp;
+
+        // Decorrelated stereo diffuse noise
+        const rawL = ((Math.random() * 2) - 1) * gain;
+        const rawR = ((Math.random() * 2) - 1) * gain;
+
+        // Warm 1-pole lowpass filter removes digital white-noise fizz
+        lastL = lastL + alpha * (rawL - lastL);
+        lastR = lastR + alpha * (rawR - lastR);
+
+        left[preDelaySamples + i] = lastL;
+        right[preDelaySamples + i] = lastR;
+
+        sumSqL += lastL * lastL;
+        sumSqR += lastR * lastR;
+      }
+
+      // Energy Normalization: ensures the reverb sits in the mix with a predictable, musical loudness
+      const rmsL = Math.sqrt(sumSqL / bodyLen) || 1e-4;
+      const rmsR = Math.sqrt(sumSqR / bodyLen) || 1e-4;
+      const scaleL = cfg.targetRms / rmsL;
+      const scaleR = cfg.targetRms / rmsR;
+
+      for (let i = 0; i < bodyLen; i++) {
+        left[preDelaySamples + i] *= scaleL;
+        right[preDelaySamples + i] *= scaleR;
+      }
+
+      // Keep cache small
+      const keys = Object.keys(appState.impulseCache);
+      if (keys.length > 12) {
+        delete appState.impulseCache[keys[0]];
+      }
+      appState.impulseCache[cacheKey] = buffer;
+      return buffer;
     }
 
     // Helper: Get accurate current track position across live speed changes
@@ -1041,25 +986,45 @@
     }
 
     function syncReverbConnection() {
-      if (!appState.highCutFilter || !appState.reverbEngine) return;
+      if (!appState.highCutFilter || !appState.convolverNode) return;
       const shouldConnect = !appState.isBypassed && appState.reverbMix > 0;
-      if (shouldConnect && !appState.reverbConnected) {
-        appState.highCutFilter.connect(appState.reverbEngine.input);
-        appState.reverbConnected = true;
-      } else if (!shouldConnect && appState.reverbConnected) {
+      if (shouldConnect && !appState.convolverConnected) {
+        appState.highCutFilter.connect(appState.convolverNode);
+        appState.convolverConnected = true;
+      } else if (!shouldConnect && appState.convolverConnected) {
         try {
-          appState.highCutFilter.disconnect(appState.reverbEngine.input);
+          appState.highCutFilter.disconnect(appState.convolverNode);
         } catch (e) {}
-        appState.reverbConnected = false;
+        appState.convolverConnected = false;
+      }
+    }
+
+    function refreshReverbBuffer(immediate = false) {
+      if (!appState.audioCtx || !appState.convolverNode) return;
+      if (appState.reverbDebounceTimer) {
+        clearTimeout(appState.reverbDebounceTimer);
+        appState.reverbDebounceTimer = null;
+      }
+      const applyBuffer = () => {
+        if (!appState.audioCtx || !appState.convolverNode) return;
+        appState.convolverNode.buffer = generateNaturalImpulse(
+          appState.audioCtx,
+          appState.reverbSpace,
+          appState.reverbDecay
+        );
+      };
+      if (immediate) {
+        applyBuffer();
+      } else {
+        appState.reverbDebounceTimer = setTimeout(applyBuffer, 90);
       }
     }
 
     // Calculate clean pre-EQ headroom so +6dB to +15dB bass boosts never hard-clip mobile DACs
     function computeHeadroomGain() {
-      if (appState.isBypassed || appState.bassBoost <= 0) return 0.92;
-      // Attenuate proportional to half the dB boost so limiter catches peaks transparently
-      const trimDb = -(appState.bassBoost * 0.45);
-      return 0.92 * Math.pow(10, trimDb / 20);
+      if (appState.isBypassed || appState.bassBoost <= 0) return 0.95;
+      const trimDb = -(appState.bassBoost * 0.35);
+      return 0.95 * Math.pow(10, trimDb / 20);
     }
 
     // Build the Web Audio Graph
@@ -1081,14 +1046,16 @@
       appState.highCutFilter.frequency.value = appState.isBypassed ? 20000 : appState.highCut;
       appState.highCutFilter.Q.value = -3.0103;
 
-      // Algorithmic Stereo Reverb
-      appState.reverbEngine = createAlgorithmicReverb(ctx, appState.reverbSpace, appState.reverbDecay);
+      // Natural Lush Convolver Node
+      appState.convolverNode = ctx.createConvolver();
+      appState.convolverNode.buffer = generateNaturalImpulse(ctx, appState.reverbSpace, appState.reverbDecay);
 
       appState.wetGainNode = ctx.createGain();
       appState.dryGainNode = ctx.createGain();
 
-      const wet = appState.isBypassed ? 0 : (appState.reverbMix / 100);
-      const dry = appState.isBypassed ? 1.0 : (1.0 - (appState.reverbMix / 100) * 0.38);
+      const mixNorm = appState.reverbMix / 100;
+      const wet = appState.isBypassed ? 0 : (mixNorm * 0.48);
+      const dry = appState.isBypassed ? 1.0 : (1.0 - mixNorm * 0.18);
       appState.wetGainNode.gain.value = wet;
       appState.dryGainNode.gain.value = dry;
 
@@ -1098,9 +1065,9 @@
 
       // Transparent Studio Limiter to prevent harsh digital speaker clipping on heavy 808s
       appState.limiterNode = ctx.createDynamicsCompressor();
-      appState.limiterNode.threshold.value = -2.0;
+      appState.limiterNode.threshold.value = -1.5;
       appState.limiterNode.knee.value = 6.0;
-      appState.limiterNode.ratio.value = 12.0;
+      appState.limiterNode.ratio.value = 10.0;
       appState.limiterNode.attack.value = 0.003;
       appState.limiterNode.release.value = 0.12;
 
@@ -1113,7 +1080,7 @@
       appState.dryGainNode.connect(appState.gainNode);
 
       // Wet path
-      appState.reverbEngine.output.connect(appState.wetGainNode);
+      appState.convolverNode.connect(appState.wetGainNode);
       appState.wetGainNode.connect(appState.gainNode);
       syncReverbConnection();
 
@@ -1212,13 +1179,10 @@
 
       syncReverbConnection();
 
-      if (appState.reverbEngine) {
-        appState.reverbEngine.updateParams(appState.reverbSpace, appState.reverbDecay, now);
-      }
-
       if (appState.wetGainNode && appState.dryGainNode) {
-        const wet = appState.isBypassed ? 0 : (appState.reverbMix / 100);
-        const dry = appState.isBypassed ? 1.0 : (1.0 - (appState.reverbMix / 100) * 0.38);
+        const mixNorm = appState.reverbMix / 100;
+        const wet = appState.isBypassed ? 0 : (mixNorm * 0.48);
+        const dry = appState.isBypassed ? 1.0 : (1.0 - mixNorm * 0.18);
         appState.wetGainNode.gain.setTargetAtTime(wet, now, smoothTau);
         appState.dryGainNode.gain.setTargetAtTime(dry, now, smoothTau);
       }
@@ -1746,9 +1710,10 @@
         offlineDry.connect(offlineMaster);
 
         if (wet > 0) {
-          const offlineReverb = createAlgorithmicReverb(offlineCtx, appState.reverbSpace, appState.reverbDecay);
-          offlineHigh.connect(offlineReverb.input);
-          offlineReverb.output.connect(offlineWet);
+          const offlineConvolver = offlineCtx.createConvolver();
+          offlineConvolver.buffer = generateNaturalImpulse(offlineCtx, appState.reverbSpace, appState.reverbDecay);
+          offlineHigh.connect(offlineConvolver);
+          offlineConvolver.connect(offlineWet);
           offlineWet.connect(offlineMaster);
         }
 
@@ -2067,6 +2032,7 @@ This entire project runs 100% in the browser with **zero backend server costs**!
     reverbSpaceSelect.addEventListener('change', (e) => {
       appState.reverbSpace = e.target.value;
       reverbSpaceBadge.textContent = appState.reverbSpace.charAt(0).toUpperCase() + appState.reverbSpace.slice(1);
+      refreshReverbBuffer(true);
       updateAudioParams();
     });
 
@@ -2080,6 +2046,7 @@ This entire project runs 100% in the browser with **zero backend server costs**!
       appState.reverbDecay = parseFloat(e.target.value);
       reverbDecayValueText.textContent = `${appState.reverbDecay.toFixed(1)}s`;
       updateAudioParams();
+      refreshReverbBuffer(false);
     });
 
     // Bass & High Cut Controls
